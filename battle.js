@@ -54,19 +54,19 @@ const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
     console.log(move)
     let AttackStat = 0
     let DefenseStat = 1
-    if (move.dclass == 'special') {
+    if (move.dclass === 'special') {
         AttackStat = pokeATT.stats['special-attack']
         DefenseStat = pokeDEF.stats['special-defense']
     }
-    else if (move.dclass == 'physical') {
+    else if (move.dclass === 'physical') {
         AttackStat = pokeATT.stat['attack']
         DefenseStat = pokeDEF.stats['defense']
     }
     let weather = 1
-    if (pokeATT.terrain.weather == 'rain' && "water" == move.type || pokeATT.terrain.weather == 'harsh-sunlight' && "fire" == move.type) {
+    if (pokeATT.terrain.weather === 'rain' && "water" === move.type || pokeATT.terrain.weather === 'harsh-sunlight' && "fire" === move.type) {
         weather = 1.5
     }
-    else if (pokeATT.terrain.weather == 'rain' && "fire" == move.type || pokeATT.terrain.weather == 'harsh-sunlight' && "water" == move.type) {
+    else if (pokeATT.terrain.weather === 'rain' && "fire" === move.type || pokeATT.terrain.weather === 'harsh-sunlight' && "water" === move.type) {
         weather = 0.5
     }
     let critDamage = 1 // les deg crits ne sont pas implemente
@@ -74,8 +74,8 @@ const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
     let random = getRandomInt(85,101) / 100
 
     let STAB = 1
-    if (move.type in pokeATT.types && move.type != 'typeless') {
-        if (pokeATT.ability = 'adaptability') {
+    if (move.type in pokeATT.types && move.type !== 'typeless') {
+        if (pokeATT.ability === 'adaptability') {
             STAB = 2
         }
         else {
@@ -96,18 +96,18 @@ const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
         }
     });
     let burn = 1
-    if (pokeATT.status == 'burned' && pokeATT.ability != 'guts' && move.dclass == 'physical') {
+    if (pokeATT.status === 'burned' && pokeATT.ability !== 'guts' && move.dclass === 'physical') {
         burn = 0.5
     }
-    damage = ((((((2 * pokeATT.level)/5) + 2) * move.power * AttackStat / DefenseStat) / 50) + 2) * weather* critDamage * random * STAB * typeEff * burn
+    let damage = ((((((2 * pokeATT.level)/5) + 2) * move.power * AttackStat / DefenseStat) / 50) + 2) * weather* critDamage * random * STAB * typeEff * burn
     console.log(AttackStat)
     return damage
 }
 
 class Pokemon {
     /**
-     * 
-     * @param {number} id the id of the pokemon
+     *
+     * @param pokejson
      */
     constructor(pokejson){
         // On va commencer par recup la reponse de l'api
@@ -181,7 +181,7 @@ class Pokemon {
     useMove(moveIndex, pokemon, gen) {
         //La fonction ne va rien retourner car elle va directement interagir avec le pokemon adverse qui est en argument :)
         if (gen >= 5){
-        damage = damageCalculationGen5Onward(pokemon.currentMoves[moveIndex], this, pokemon)
+        let damage = damageCalculationGen5Onward(pokemon.currentMoves[moveIndex], this, pokemon)
         console.log(`Dammage = ${damage}`)
         }
     }
