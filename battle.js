@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = 1024;
 canvas.height = 576;
 
-c.fillRect(0, 0, canvas.width, canvas.height);
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 
 
@@ -15,7 +15,7 @@ function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
-  }
+}
 
 
 
@@ -25,6 +25,7 @@ const createPokemonFromId = async (id) => {
     const data = await response.json()
     return new Pokemon(data)
 }
+
 /*
 const createMoveFromName = async (name) => {
     const url= `https://pokeapi.co/api/v2/move/${name}`
@@ -36,7 +37,7 @@ const createMoveFromName = async (name) => {
 */
 
 const createMoveFromName = async (name) => {
-    const url= `https://pokeapi.co/api/v2/move/${name}`
+    const url = `https://pokeapi.co/api/v2/move/${name}`
     const response = await fetch(url)
     const data = await response.json()
     return new Move(data)
@@ -45,7 +46,53 @@ const createMoveFromName = async (name) => {
 
 
 const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
-    console.log(move)
+    const AD = getADStats(move, pokeATT, pokeDEF)
+    const AttackStat = AD[0]
+    const DefenseStat = AD[1]
+    const weather = getWeather(move, pokeATT)
+    const critDamage = 1 // les deg crits ne sont pas implemente
+    const random = getRandomInt(85, 101) / 100
+    const STAB = getSTAB(move, pokeATT)
+    const typeEff = getTypeEff(move, pokeDEF)
+    const burn = getBurn(move, pokeATT)
+    let damage = ((((((2 * pokeATT.level) / 5) + 2) * move.power * AttackStat / DefenseStat) / 50) + 2) * weather * critDamage * random * STAB * typeEff * burn
+    return damage
+}
+
+const getTypeEff = (move, pokeDEF) => {
+    let typeEff = 1
+    Object.entries(move.types).forEach(([relationType, types]) => {
+        pokeDEF.types.forEach(type => {
+            if (type in types) {
+                if (relationType == 'no_damage_to') {
+                    typeEff = 0
+                }
+                if (relationType == 'half_damage_to') {
+                    typeEff = typeEff / 2
+                }
+                if (relationType == 'double_damage_to') {
+                    typeEff = typeEff * 2
+                }
+            }
+        });
+    });
+    return typeEff
+}
+
+const getSTAB = (move, pokeATT) => {
+    let STAB = 1
+    if (move.type in pokeATT.types && move.type !== 'typeless') {
+        if (pokeATT.ability === 'adaptability') {
+            STAB = 2
+        }
+        else {
+            STAB = 1.5
+        }
+    }
+    return STAB
+}
+
+const getADStats = (move, pokeATT, pokeDEF) => {
     let AttackStat = 0
     let DefenseStat = 1
     if (move.dclass === 'special') {
@@ -56,6 +103,10 @@ const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
         AttackStat = pokeATT.stat['attack']
         DefenseStat = pokeDEF.stats['defense']
     }
+    return [AttackStat, DefenseStat]
+}
+
+const getWeather = (move, pokeATT) => {
     let weather = 1
     if (pokeATT.terrain.weather === 'rain' && "water" === move.type || pokeATT.terrain.weather === 'harsh-sunlight' && "fire" === move.type) {
         weather = 1.5
@@ -63,39 +114,15 @@ const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
     else if (pokeATT.terrain.weather === 'rain' && "fire" === move.type || pokeATT.terrain.weather === 'harsh-sunlight' && "water" === move.type) {
         weather = 0.5
     }
-    let critDamage = 1 // les deg crits ne sont pas implemente
+    return weather;
+}
 
-    let random = getRandomInt(85,101) / 100
-
-    let STAB = 1
-    if (move.type in pokeATT.types && move.type !== 'typeless') {
-        if (pokeATT.ability === 'adaptability') {
-            STAB = 2
-        }
-        else {
-            STAB = 1.5
-        }
-    }
-
-    let typeEff = 1
-    pokeDEF.types.forEach(type => {
-        if (type in move.types['no_damage_to']) {
-            typeEff = 0
-        }
-        else if (type in move.types['half_damage_to']) {
-            typeEff = typeEff / 2
-        }
-        else if (type in move.types['double_damage_to']) {
-            typeEff = typeEff * 2
-        }
-    });
+const getBurn = (move, pokeATT) => {
     let burn = 1
     if (pokeATT.status === 'burned' && pokeATT.ability !== 'guts' && move.dclass === 'physical') {
         burn = 0.5
     }
-    let damage = ((((((2 * pokeATT.level)/5) + 2) * move.power * AttackStat / DefenseStat) / 50) + 2) * weather* critDamage * random * STAB * typeEff * burn
-    console.log(AttackStat)
-    return damage
+    return burn
 }
 
 const getFirstNonNull = (pokeTeam) => {
@@ -117,13 +144,7 @@ class Pokemon {
      *
      * @param pokejson
      */
-    constructor(pokejson){
-        // On met dans le cache les ressources img
-
-        this.images = {
-            'front': pokejson.sprites.front_default,
-            'back': pokejson.sprites.back_default
-        }
+    constructor(pokejson) {
 
         this.name = pokejson.name
         this.types = ['none', 'none']
@@ -143,7 +164,6 @@ class Pokemon {
                 localStorage.setItem(key, stat.stat.url)
             }
         });
-        console.log(this.stats)
         this.possiblesmoves = [] // pas la peine de tout récup sur les moves vu que on peut appeler l'api pour avoir les detail juste avec leurs noms
         pokejson.moves.forEach(element => {
             let value = element.move.name
@@ -169,20 +189,6 @@ class Pokemon {
             localStorage.setItem(this.name + '-front', pokejson.sprites.front_default)
             localStorage.setItem(this.name + '-back', pokejson.sprites.back_default)
         }
-        //Puis les sprites des types
-        this.types.forEach(type => {
-           if (localStorage.getItem(type) == null) {
-            localStorage.setItem(type, )
-           } 
-        });
-        for (let index = 0; index < this.types.length; index++) {
-            let type = this.types[index];
-            if (type != 'none') {
-                if (localStorage.getItem(type) == null) {
-                    localStorage.setItem(type, pokejson.types[index].type.url)
-                }
-            }
-        }
     }
 
     setTerrain(terrain) {
@@ -190,7 +196,7 @@ class Pokemon {
     }
 
     setTeam(team) {
-        if (team in ['A', 'B']){
+        if (team in ['A', 'B']) {
             this.team = team
         }
     }
@@ -218,28 +224,28 @@ class Pokemon {
      */
     useMove(moveIndex, pokemon, gen) {
         //La fonction ne va rien retourner car elle va directement interagir avec le pokemon adverse qui est en argument :)
-        if (gen >= 5){
-        let damage = damageCalculationGen5Onward(pokemon.currentMoves[moveIndex], this, pokemon)
-        console.log(`Dammage = ${damage}`)
+        if (gen >= 5) {
+            let damage = damageCalculationGen5Onward(pokemon.currentMoves[moveIndex], this, pokemon)
+            console.log(`Dammage = ${damage}`)
         }
     }
 }
 
 class Move {
-    constructor(movejson){
+    constructor(movejson) {
         this.json = movejson
         this.pp = movejson.pp
         this.power = movejson.power
         this.type = movejson.type.name
         this.types = {} // dict qui donne la relation entre les différent le move est les types
         this.dclass = movejson.damage_class.name
-        setTypes(this)
+        this.setTypes()
     }
 
-    async setTypes(typesjson) {
-        const url= `https://pokeapi.co/api/v2/type/${move.type}`
+    async setTypes() {
+        const url = `https://pokeapi.co/api/v2/type/${this.type}`
         const response = await fetch(url)
-        const data = await response.json()
+        const typesjson = await response.json()
         Object.entries(typesjson.damage_relations).forEach(([relationType, types]) => {
             let value = []
             types.forEach(type => {
@@ -251,7 +257,7 @@ class Move {
 }
 
 class Terrain {
-    constructor(teamA, teamB){
+    constructor(teamA, teamB) {
         this.weather = "normal"
         this.pokemonA = teamA
         this.pokemonB = teamB
@@ -265,28 +271,6 @@ class Terrain {
         });
     }
 }
-
-// console.log("Le js est la")
-// charizardPromise = createPokemonFromId('charizard')
-// pikachuPromise = createPokemonFromId('pikachu')
-
-// Promise.all([charizardPromise, pikachuPromise]).then((result) => {
-// 	const charizard = result[0]
-//     const pikachu = result[1]
-
-
-// 	charizard.setMove('fire-punch',0)
-// 	charizard.setMove('headbutt',1)
-// 	charizard.setMove('solar-beam',2)
-// 	charizard.setMove('cut',3)
-	
-// 	pikachu.setMove('thunderbolt',0)
-// 	pikachu.setMove('thunder',1)
-	
-// 	terrain = new Terrain([charizard], [pikachu])
-//     charizard.useMove(0, pikachu, 5)
-	
-// })
 
 class Combat {
     constructor(canvas, teamA, teamB) {
@@ -314,21 +298,22 @@ class Combat {
         this.earth = context.createLinearGradient(0, this.horizon, 0, height);
         this.earth.addColorStop(0.0, 'rgb(81,140,20)');
         this.earth.addColorStop(1.0, 'rgb(123,177,57)');
+    }
 }
 
 const combatBasique = async () => {
     charizard = await createPokemonFromId('charizard')
     pikachu = await createPokemonFromId('pikachu')
-    await charizard.setMove('fire-punch',0)
-	await charizard.setMove('headbutt',1)
-	await charizard.setMove('solar-beam',2)
-	await charizard.setMove('cut',3)
-	
-	await pikachu.setMove('thunderbolt',0)
-	await pikachu.setMove('thunder',1)
-	
-	terrain = await new Terrain([charizard], [pikachu])
-    await charizard.useMove(0, pikachu, 5)
+    await charizard.setMove('fire-punch', 0)
+    await charizard.setMove('headbutt', 1)
+    await charizard.setMove('solar-beam', 2)
+    await charizard.setMove('cut', 3)
+
+    await pikachu.setMove('thunderbolt', 0)
+    await pikachu.setMove('thunder', 1)
+
+    terrain = await new Terrain([charizard], [pikachu])
+    await charizard.useMove(1, pikachu, 5)
 }
 
 combatBasique()
