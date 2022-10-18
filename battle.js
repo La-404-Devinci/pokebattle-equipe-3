@@ -1,5 +1,5 @@
 const canvas = document.querySelector('canvas');
-const c = canvas.getContext('2d');
+const ctx = canvas.getContext('2d');
 
 canvas.width = 1024;
 canvas.height = 576;
@@ -42,12 +42,6 @@ const createMoveFromName = async (name) => {
     return new Move(data)
 }
 
-const msetTypes = async (move) => {
-    const url= `https://pokeapi.co/api/v2/type/${move.type}`
-    const response = await fetch(url)
-    const data = await response.json()
-    move.setTypes(data)
-}
 
 
 const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
@@ -104,13 +98,28 @@ const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
     return damage
 }
 
+const getFirstNonNull = (pokeTeam) => {
+    let i = 0
+    let pokemon = null
+    while (this.pokeTeam[i] == null) {
+        i++
+    }
+    if (i <= 5) {
+        pokemon = pokeTeam[i]
+    }
+    return pokemon
+
+}
+
+
 class Pokemon {
     /**
      * 
      * @param {number} id the id of the pokemon
      */
     constructor(pokejson){
-        // On va commencer par recup la reponse de l'api
+        // On met dans le cache les ressources img
+
         this.images = {
             'front': pokejson.sprites.front_default,
             'back': pokejson.sprites.back_default
@@ -120,12 +129,19 @@ class Pokemon {
         this.types = ['none', 'none']
         pokejson.types.forEach(element => {
             this.types[element.slot - 1] = element.type.name
+            //On oublie pas d'ajouter les ressources img
+            if (localStorage.getItem(element.type.name) == null) {
+                localStorage.setItem(element.type.name, element.type.url)
+            }
         });
         this.stats = {}
         pokejson.stats.forEach(stat => {
             let key = stat.stat.name
             let value = stat.base_stat
             this.stats[key] = value
+            if (localStorage.getItem(key) == null) {
+                localStorage.setItem(key, stat.stat.url)
+            }
         });
         console.log(this.stats)
         this.possiblesmoves = [] // pas la peine de tout récup sur les moves vu que on peut appeler l'api pour avoir les detail juste avec leurs noms
@@ -145,6 +161,28 @@ class Pokemon {
             this.abilities.push(ability.ability.name)
         });
         this.ability = this.abilities[0]
+
+
+        // On met dans le cache les ressources img
+        // On commence par les sprites du pokemon
+        if (localStorage.getItem(this.name + '-front') == null) {
+            localStorage.setItem(this.name + '-front', pokejson.sprites.front_default)
+            localStorage.setItem(this.name + '-back', pokejson.sprites.back_default)
+        }
+        //Puis les sprites des types
+        this.types.forEach(type => {
+           if (localStorage.getItem(type) == null) {
+            localStorage.setItem(type, )
+           } 
+        });
+        for (let index = 0; index < this.types.length; index++) {
+            let type = this.types[index];
+            if (type != 'none') {
+                if (localStorage.getItem(type) == null) {
+                    localStorage.setItem(type, pokejson.types[index].type.url)
+                }
+            }
+        }
     }
 
     setTerrain(terrain) {
@@ -195,10 +233,13 @@ class Move {
         this.type = movejson.type.name
         this.types = {} // dict qui donne la relation entre les différent le move est les types
         this.dclass = movejson.damage_class.name
-        msetTypes(this)
+        setTypes(this)
     }
 
-    setTypes(typesjson) {
+    async setTypes(typesjson) {
+        const url= `https://pokeapi.co/api/v2/type/${move.type}`
+        const response = await fetch(url)
+        const data = await response.json()
         Object.entries(typesjson.damage_relations).forEach(([relationType, types]) => {
             let value = []
             types.forEach(type => {
@@ -246,6 +287,34 @@ class Terrain {
 //     charizard.useMove(0, pikachu, 5)
 	
 // })
+
+class Combat {
+    constructor(canvas, teamA, teamB) {
+        this.canvas = canvas
+        this.ctx = canvas.getContext('2d')
+        this.teamA = teamA
+        this.teamB = teamB
+        this.pokeA = getFirstNonNull(teamA)
+        this.pokeB = getFirstNonNull(teamB)
+        if (this.pokeA == null || this.pokeB == null) {
+            alert("il n'y a pas de pokemon dans une ou deux des teams")
+        }
+    }
+
+    initCanvas() {
+        this.offset = 0;
+        this.width = width;
+        this.horizon = height * 0.3;
+        // This creates the sky gradient (from a darker blue to white at the bottom)
+        this.sky = context.createLinearGradient(0, 0, 0, this.horizon);
+        this.sky.addColorStop(0.0, 'rgb(55,121,179)');
+        this.sky.addColorStop(0.7, 'rgb(121,194,245)');
+        this.sky.addColorStop(1.0, 'rgb(164,200,214)');
+        // this creates the grass gradient (from a darker green to a lighter green)
+        this.earth = context.createLinearGradient(0, this.horizon, 0, height);
+        this.earth.addColorStop(0.0, 'rgb(81,140,20)');
+        this.earth.addColorStop(1.0, 'rgb(123,177,57)');
+}
 
 const combatBasique = async () => {
     charizard = await createPokemonFromId('charizard')
