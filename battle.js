@@ -281,14 +281,18 @@ class Terrain {
         this.pokeTeamA = teamA
         this.pokemonA = getFirstNonNull(teamA)
         this.pokeTeamB = teamB
-        this.pokemonB = getFirstNonNull(teamA)
+        this.pokemonB = getFirstNonNull(teamB)
         this.pokeTeamA.forEach(pokemon => {
-            pokemon.setTerrain(this)
-            pokemon.setTeam('A')
+            if (pokemon != null) {
+                pokemon.setTerrain(this)
+                pokemon.setTeam('A')
+            }
         });
         this.pokeTeamB.forEach(pokemon => {
-            pokemon.setTerrain(this)
-            pokemon.setTeam('B')
+            if (pokemon != null) {
+                pokemon.setTerrain(this)
+                pokemon.setTeam('B')
+            }
         });
     }
 }
@@ -359,6 +363,7 @@ class Combat {
         width = 275
         height = 75
         curve = [10]
+        console.log(this.terrain)
         this.pokeInterfaceB = new PokeInterface(this.canvas, this.terrain.pokemonB,x, y, width, height, gap, curve)
     
     }
@@ -416,10 +421,10 @@ class PokeInterface {
         const hpheight = this.height*0.15
         const currenthpwidth = hpwidth * (this.pokemon.currentHp / this.pokemon.stats['hp'])
         var hpcolor = 'green'
-        if (this.pokemon.currentHp < 4*this.pokemon.stats['hp']) {
+        if (4*this.pokemon.currentHp < this.pokemon.stats['hp']) {
             hpcolor = 'red'
         }
-        else if (this.pokemon.currentHp < 2*this.pokemon.stats['hp']) {
+        else if (2*this.pokemon.currentHp < this.pokemon.stats['hp']) {
             hpcolor = 'orange'
         }
         this.ctx.font = '16px arial bold'
@@ -517,7 +522,7 @@ const combatBasique = async () => {
     await pikachu.setMove('thunderbolt', 0)
     await pikachu.setMove('thunder', 1)
 
-    terrain = await new Terrain([charizard], [pikachu])
+    terrain = await new Terrain([charizard, null, null, null, null, null], [pikachu, null, null, null, null, null])
     await charizard.useMove(1, pikachu, 5)
     charizard.currentHp -= 50
 
