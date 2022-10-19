@@ -252,6 +252,7 @@ class Pokemon {
 class Move {
     constructor(movejson) {
         this.json = movejson
+        this.name = movejson.name
         this.pp = movejson.pp
         this.power = movejson.power
         this.type = movejson.type.name
@@ -277,13 +278,15 @@ class Move {
 class Terrain {
     constructor(teamA, teamB) {
         this.weather = "normal"
-        this.pokemonA = teamA
-        this.pokemonB = teamB
-        this.pokemonA.forEach(pokemon => {
+        this.pokeTeamA = teamA
+        this.pokemonA = getFirstNonNull(teamA)
+        this.pokeTeamB = teamB
+        this.pokemonB = getFirstNonNull(teamA)
+        this.pokeTeamA.forEach(pokemon => {
             pokemon.setTerrain(this)
             pokemon.setTeam('A')
         });
-        this.pokemonB.forEach(pokemon => {
+        this.pokeTeamB.forEach(pokemon => {
             pokemon.setTerrain(this)
             pokemon.setTeam('B')
         });
@@ -291,29 +294,28 @@ class Terrain {
 }
 
 class Combat {
-    constructor(canvas, teamA, teamB) {
+    constructor(canvas, terrain) {
         this.canvas = canvas
+        this.terrain = terrain
         this.ctx = canvas.getContext("2d");
         this.ctx.imageSmoothingEnabled = false;
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         console.log(this.ctx)
-        this.teamA = teamA
-        this.teamB = teamB
-        this.pokeA = getFirstNonNull(teamA)
-        this.pokeB = getFirstNonNull(teamB)
-        if (this.pokeA == null || this.pokeB == null) {
+        if (this.terrain.pokemonA == null || this.terrain.pokemonB == null) {
             alert("il n'y a pas de pokemon dans une ou deux des teams")
         }
         this.initCanvas()
         this.pokeInterfaceA = null
         this.pokeInterfaceB = null
+        this.UserInterface = null
     }
 
     initCanvas() {
         this.drawBackground()
         this.drawPokemons()
         this.drawPokeInterface()
+        this.drawUserInterface()
     }
 
     drawBackground() {
@@ -335,9 +337,9 @@ class Combat {
 
     drawPokemons() {
         var pokeAImg = new Image()
-        pokeAImg.src = localStorage.getItem(this.pokeA.name+ '-back')
+        pokeAImg.src = localStorage.getItem(this.terrain.pokemonA.name+ '-back')
         var pokeBImg = new Image()
-        pokeBImg.src = localStorage.getItem(this.pokeB.name + '-front')
+        pokeBImg.src = localStorage.getItem(this.terrain.pokemonB.name + '-front')
         console.log(pokeAImg)
         console.log(`Height = ${this.height}, Width = ${this.width}`)
         this.ctx.drawImage(pokeAImg, this.width/15, this.height / 2.5,pokeAImg.naturalWidth * 3 ,pokeAImg.naturalHeight * 3)
@@ -345,14 +347,24 @@ class Combat {
     }
 
     drawPokeInterface() {
-        this.pokeInterfaceA = new PokeInterface(this.canvas, this.pokeA,)
         const gap = 10
-        let x = 100
-        let y = 20
         let width = 275
-        let height = 125
+        let height = 75
+        let x = this.canvas.width/2
+        let y = 325
         let curve = [10]
-        this.pokeInterfaceA = new PokeInterface(this.canvas, this.pokeA,x, y, width, height, gap, curve)
+        this.pokeInterfaceA = new PokeInterface(this.canvas, this.terrain.pokemonA,x, y, width, height, gap, curve)
+        x = 120
+        y = 100
+        width = 275
+        height = 75
+        curve = [10]
+        this.pokeInterfaceB = new PokeInterface(this.canvas, this.terrain.pokemonB,x, y, width, height, gap, curve)
+    
+    }
+
+    drawUserInterface() {
+        this.UserInterface = new UserInterface(this.canvas, this.terrain)
     }
 
 }
@@ -393,17 +405,106 @@ class PokeInterface {
     drawInformation() {
         this.ctx.font = '16px arial'
         this.ctx.fillStyle = 'black'
-        this.ctx.fillText(this.pokemon.name.toUpperCase(), this.x + this.width / 10, this.y + this.height/4)
-        this.ctx.fillText(`LV.${this.pokemon.level}`, this.x + this.width*0.8, this.y + this.height/4)
+        this.ctx.fillText(this.pokemon.name.toUpperCase(), this.x + this.width / 10,this.gap +  this.y + this.height/6)
+        this.ctx.fillText(`LV.${this.pokemon.level}`, this.x + this.width*0.8,this.gap +  this.y + this.height/6)
     }
 
     drawHPbar() {
+        const hpx = this.gap + this.x + this.width / 6.5
+        const hpy = this.gap +  this.y + this.height/3
+        const hpwidth = this.width*(0.6)
+        const hpheight = this.height*0.15
+        const currenthpwidth = hpwidth * (this.pokemon.currentHp / this.pokemon.stats['hp'])
+        var hpcolor = 'green'
+        if (this.pokemon.currentHp < 4*this.pokemon.stats['hp']) {
+            hpcolor = 'red'
+        }
+        else if (this.pokemon.currentHp < 2*this.pokemon.stats['hp']) {
+            hpcolor = 'orange'
+        }
+        this.ctx.font = '16px arial bold'
+        this.ctx.fillStyle = 'black'
+        this.ctx.fillText('HP', hpx - this.width / 10, hpy+ hpheight)
+        this.ctx.fillText(`${this.pokemon.currentHp}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
         this.ctx.beginPath()
-        this.ctx.fillStyle = 'green'
-        this.ctx.roundRect(this.x + this.width * 0.2, this.y + this.height*0.7, this.width*0,7, this.height*0.2, [10,10,10,10])
+        this.ctx.fillStyle = this.colorExt
+        this.ctx.roundRect(hpx,hpy, hpwidth, hpheight, [0,10,0,10])
+        this.ctx.fill()
+        this.ctx.beginPath()
+        this.ctx.fillStyle = hpcolor
+        console.log(currenthpwidth)
+        console.log(hpwidth)
+        this.ctx.roundRect(hpx,hpy, currenthpwidth, hpheight, [0,10,0,10])
         this.ctx.fill()
     }
 }
+
+class UserInterface {
+    constructor(canvas, terrain) {
+        this.canvas = canvas
+        this.ctx = canvas.getContext('2d')
+        this.terrain = terrain
+        console.log(terrain)
+        this.menu = 'attack'
+        this.colorExt = 'rgb(108,108,108)'
+        this.colorInt = 'rgb(248,248,216)'
+        this.x = this.canvas.width/2
+        this.y = this.canvas.height* (0.70)
+        this.width = this.canvas.width - this.x
+        this.height = this.canvas.height - this.y
+        this.gap = 10
+
+        this.initInterface()
+    }
+
+    initInterface() {
+        this.drawBackground()
+        this.drawFrontground()
+    }
+
+    drawBackground() {
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.colorExt
+        this.ctx.roundRect(this.x, this.y, this.width, this.height, [20, 0, 0, 0])
+        this.ctx.fill()
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.colorInt
+        this.ctx.roundRect(this.x + this.gap/2, this.y + this.gap/2, this.width - this.gap, this.height - this.gap, [20, 0, 0, 0])
+        this.ctx.fill()
+
+    }
+
+    drawFrontground() {
+        if (this.menu == 'attack') {
+            this.drawAttack()
+        }
+    }
+
+    drawAttack() {
+        let i = 0
+        const gapx = 65
+        const gapy = 20
+        const width = 150
+        const height = 60
+        console.log(this.terrain.pokemonA.currentMoves)
+        this.terrain.pokemonA.currentMoves.forEach(move => {
+            if (move != null) {
+                let x = this.x + gapx + (width + gapx) * (i % 2)
+                let y = this.y + gapy + (height + gapy) * Math.floor(i / 2)
+                this.ctx.beginPath();
+                this.ctx.fillStyle = this.colorExt
+                this.ctx.roundRect(x, y, width, height, [0])
+                this.ctx.fill()
+                this.ctx.font = '16px arial'
+                this.ctx.fillStyle = 'black'
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`${move.name}`, x + width/2, y + height/2)
+                i++
+            }
+        });
+    }
+}
+
 
 const combatBasique = async () => {
     charizard = await createPokemonFromId('charizard')
@@ -418,8 +519,9 @@ const combatBasique = async () => {
 
     terrain = await new Terrain([charizard], [pikachu])
     await charizard.useMove(1, pikachu, 5)
+    charizard.currentHp -= 50
 
-    const combat = new Combat(document.querySelector('canvas'), [charizard, null, null, null, null, null], [pikachu, null, null, null, null, null])
+    const combat = new Combat(document.querySelector('canvas'), terrain)
 }
 
 combatBasique()
