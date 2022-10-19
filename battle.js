@@ -1,10 +1,11 @@
 const canvas = document.querySelector('canvas');
-const ctx = canvas.getContext('2d');
 
 canvas.width = 1024;
 canvas.height = 576;
 
-ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+//ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 
 
@@ -42,8 +43,6 @@ const createMoveFromName = async (name) => {
     const data = await response.json()
     return new Move(data)
 }
-
-
 
 const damageCalculationGen5Onward = (move, pokeATT, pokeDEF) => {
     const AD = getADStats(move, pokeATT, pokeDEF)
@@ -128,16 +127,35 @@ const getBurn = (move, pokeATT) => {
 const getFirstNonNull = (pokeTeam) => {
     let i = 0
     let pokemon = null
-    while (this.pokeTeam[i] == null) {
+    while (pokeTeam[i] == null && i < 6) {
         i++
     }
-    if (i <= 5) {
+    if (pokeTeam[i] != null) {
         pokemon = pokeTeam[i]
     }
     return pokemon
-
 }
 
+const drawBackground = (self, ) => {
+    const horizon = this.height * 0.3;
+    // This creates the sky gradient (from a darker blue to white at the bottom)
+    const sky = this.ctx.createLinearGradient(0, 0, 0, horizon);
+    sky.addColorStop(0.0, 'rgb(55,121,179)');
+    sky.addColorStop(0.7, 'rgb(121,194,245)');
+    sky.addColorStop(1.0, 'rgb(164,200,214)');
+    // this creates the grass gradient (from a darker green to a lighter green)
+    const earth = this.ctx.createLinearGradient(0, horizon, 0, this.height);
+    earth.addColorStop(0.0, 'rgb(81,140,20)');
+    earth.addColorStop(1.0, 'rgb(123,177,57)');
+    this.ctx.fillStyle = sky;
+    this.ctx.fillRect(0, 0, this.width, horizon);
+    this.ctx.fillStyle = earth;
+    this.ctx.fillRect(0, horizon, this.width, this.height-horizon);
+}
+
+
+
+//Classes -------------------
 
 class Pokemon {
     /**
@@ -275,7 +293,11 @@ class Terrain {
 class Combat {
     constructor(canvas, teamA, teamB) {
         this.canvas = canvas
-        this.ctx = canvas.getContext('2d')
+        this.ctx = canvas.getContext("2d");
+        this.ctx.imageSmoothingEnabled = false;
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        console.log(this.ctx)
         this.teamA = teamA
         this.teamB = teamB
         this.pokeA = getFirstNonNull(teamA)
@@ -283,21 +305,103 @@ class Combat {
         if (this.pokeA == null || this.pokeB == null) {
             alert("il n'y a pas de pokemon dans une ou deux des teams")
         }
+        this.initCanvas()
+        this.pokeInterfaceA = null
+        this.pokeInterfaceB = null
     }
 
     initCanvas() {
-        this.offset = 0;
-        this.width = width;
-        this.horizon = height * 0.3;
+        this.drawBackground()
+        this.drawPokemons()
+        this.drawPokeInterface()
+    }
+
+    drawBackground() {
+        const horizon = this.height * 0.3;
         // This creates the sky gradient (from a darker blue to white at the bottom)
-        this.sky = context.createLinearGradient(0, 0, 0, this.horizon);
-        this.sky.addColorStop(0.0, 'rgb(55,121,179)');
-        this.sky.addColorStop(0.7, 'rgb(121,194,245)');
-        this.sky.addColorStop(1.0, 'rgb(164,200,214)');
+        const sky = this.ctx.createLinearGradient(0, 0, 0, horizon);
+        sky.addColorStop(0.0, 'rgb(55,121,179)');
+        sky.addColorStop(0.7, 'rgb(121,194,245)');
+        sky.addColorStop(1.0, 'rgb(164,200,214)');
         // this creates the grass gradient (from a darker green to a lighter green)
-        this.earth = context.createLinearGradient(0, this.horizon, 0, height);
-        this.earth.addColorStop(0.0, 'rgb(81,140,20)');
-        this.earth.addColorStop(1.0, 'rgb(123,177,57)');
+        const earth = this.ctx.createLinearGradient(0, horizon, 0, this.height);
+        earth.addColorStop(0.0, 'rgb(81,140,20)');
+        earth.addColorStop(1.0, 'rgb(123,177,57)');
+        this.ctx.fillStyle = sky;
+        this.ctx.fillRect(0, 0, this.width, horizon);
+        this.ctx.fillStyle = earth;
+        this.ctx.fillRect(0, horizon, this.width, this.height-horizon);
+    }
+
+    drawPokemons() {
+        var pokeAImg = new Image()
+        pokeAImg.src = localStorage.getItem(this.pokeA.name+ '-back')
+        var pokeBImg = new Image()
+        pokeBImg.src = localStorage.getItem(this.pokeB.name + '-front')
+        console.log(pokeAImg)
+        console.log(`Height = ${this.height}, Width = ${this.width}`)
+        this.ctx.drawImage(pokeAImg, this.width/15, this.height / 2.5,pokeAImg.naturalWidth * 3 ,pokeAImg.naturalHeight * 3)
+        this.ctx.drawImage(pokeBImg, this.width*0.6, this.height / 7,pokeAImg.naturalWidth * 2.7 ,pokeAImg.naturalHeight * 2.7)
+    }
+
+    drawPokeInterface() {
+        this.pokeInterfaceA = new PokeInterface(this.canvas, this.pokeA,)
+        const gap = 10
+        let x = 100
+        let y = 20
+        let width = 275
+        let height = 125
+        let curve = [10]
+        this.pokeInterfaceA = new PokeInterface(this.canvas, this.pokeA,x, y, width, height, gap, curve)
+    }
+
+}
+
+class PokeInterface {
+    constructor(canvas, pokemon, x, y, width, height, gap=10, curve=[20, 0, 20, 20]) {
+        this.canvas = canvas
+        this.ctx = canvas.getContext('2d')
+        this.pokemon = pokemon
+        this.x = x
+        this.y = y
+        this.width = width
+        this.height = height
+        this.colorExt = 'rgb(108,108,108)'
+        this.colorInt = 'rgb(248,248,216)'
+        this.gap = gap
+        this.curve = curve
+        this.initInterface()
+    }
+
+    initInterface() {
+        this.drawBackground()
+        this.drawInformation()
+        this.drawHPbar()
+    }
+
+    drawBackground() {
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.colorExt
+        this.ctx.roundRect(this.x, this.y, this.width, this.height, this.curve)
+        this.ctx.fill()
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.colorInt
+        this.ctx.roundRect(this.x+(this.gap/2), this.y+(this.gap/2), this.width-this.gap, this.height-this.gap, this.curve)
+        this.ctx.fill()
+    }
+
+    drawInformation() {
+        this.ctx.font = '16px arial'
+        this.ctx.fillStyle = 'black'
+        this.ctx.fillText(this.pokemon.name.toUpperCase(), this.x + this.width / 10, this.y + this.height/4)
+        this.ctx.fillText(`LV.${this.pokemon.level}`, this.x + this.width*0.8, this.y + this.height/4)
+    }
+
+    drawHPbar() {
+        this.ctx.beginPath()
+        this.ctx.fillStyle = 'green'
+        this.ctx.roundRect(this.x + this.width * 0.2, this.y + this.height*0.7, this.width*0,7, this.height*0.2, [10,10,10,10])
+        this.ctx.fill()
     }
 }
 
@@ -314,6 +418,8 @@ const combatBasique = async () => {
 
     terrain = await new Terrain([charizard], [pikachu])
     await charizard.useMove(1, pikachu, 5)
+
+    const combat = new Combat(document.querySelector('canvas'), [charizard, null, null, null, null, null], [pikachu, null, null, null, null, null])
 }
 
 combatBasique()
