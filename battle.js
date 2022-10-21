@@ -12,6 +12,16 @@ canvas.height = 576;
 //Je compte mettre touts les lien graphiques en cache séparément 
 
 
+var getCanvasRelative = function (e) {
+    var canvas = e.target,
+        bx = canvas.getBoundingClientRect();
+    return {
+        x: e.clientX - bx.left,
+        y: e.clientY - bx.top,
+        bx: bx
+    };
+};
+
 function getRandomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
@@ -94,6 +104,7 @@ const getSTAB = (move, pokeATT) => {
 const getADStats = (move, pokeATT, pokeDEF) => {
     let AttackStat = 0
     let DefenseStat = 1
+    if (move.dclass == null) return
     if (move.dclass === 'special') {
         AttackStat = pokeATT.stats['special-attack']
         DefenseStat = pokeDEF.stats['special-defense']
@@ -297,9 +308,10 @@ class Pokemon {
      * @param {int} gen la generation
      */
     useMove(moveIndex, pokemon) {
-        let res = [null, null]
-        if (this.currentMoves[moveIndex].category == 'attack') {
-            res = ['attack', this.useAttackMove(moveIndex, pokemon)]
+        let res = [this.currentMoves[moveIndex].category, null]
+        if (res[0] == null) return
+        if (res[0].includes('damage')) {
+            res[1] = this.useAttackMove(moveIndex, pokemon)
         }
         return res
     }
@@ -394,10 +406,10 @@ class Combat {
         if (this.terrain.pokemonA == null || this.terrain.pokemonB == null) {
             alert("il n'y a pas de pokemon dans une ou deux des teams")
         }
-        this.initCanvas()
         this.pokeInterfaceA = null
         this.pokeInterfaceB = null
         this.UserInterface = null
+        this.initCanvas()
     }
 
     initCanvas() {
@@ -405,6 +417,14 @@ class Combat {
         this.drawPokemons()
         this.drawPokeInterface()
         this.drawUserInterface()
+        // console.log(this.UserInterface)
+        // createEventListener(this, this.UserInterface)
+        var fClick = this.UserInterface.onMouseClick.bind(this.UserInterface)
+        this.canvas.addEventListener('mousedown', fClick)
+        var fMove = this.UserInterface.onMouseMove.bind(this.UserInterface)
+        this.canvas.addEventListener('mousemove', fMove)
+        var fRelease = this.UserInterface.onMouseRelease.bind(this.UserInterface)
+        this.canvas.addEventListener('mouseup', fRelease)
     }
 
     drawBackground() {
@@ -448,28 +468,65 @@ class Combat {
         width = 275
         height = 75
         curve = [10]
-        console.log(this.terrain)
+        // console.log(this.terrain)
         this.pokeInterfaceB = new PokeInterface(this.canvas, this.terrain.pokemonB, x, y, width, height, gap, curve)
 
     }
 
     drawUserInterface() {
-        this.UserInterface = new UserInterface(this.canvas, this.terrain)
+        this.UserInterface = new UserInterface(this)
     }
 
     useMove(moveIndex) {
-        console.log('AU SECOUR !!!!!!!!!!!!!!!!!!!!!!!!')
         const res = this.terrain.pokemonA.useMove(moveIndex, this.terrain.pokemonB)
-        if (res[0] == 'attack') {
-            console.log(res)
+        if (res[0].includes('damage')) {
             this.terrain.pokemonB.currentStats['hp'] -= res[1]
-            this.pokeInterfaceB.update()
+            console.log(`PokeB Hp : ${this.terrain.pokemonB.currentStats['hp']}`)
+            if (this.terrain.pokemonB.currentStats['hp'] <= 0) {
+                this.pokemonOut('B')
+            }
+            else {
+                this.pokeInterfaceB.update()
+            }
         }
-        else if(res[0] == 'statusA') {
+        if (res[0] == 'statusA') {
             res[1].forEach(stat => { // format res dans ce cas par ex: ['statusA', [['defence', 1], ['attack'], 2]]]
                 this.terrain.pokemonA.addStatStage(stat[0], stat[1])
             });
         }
+        //this.pokeInterfaceB.update()
+    }
+
+    /**
+     * Fonction qui gère le ko d'un pokemon, son nom est quand même plutôt explicite
+     * @param {string} pokemonRef Est censé être soit 'A' soit 'B' et indiaue donc si le pokemon ko est le pokemon A ou le B 
+     * @returns Rien / nada / le vide
+     */
+    pokemonOut(pokemonRef) {
+        if (pokemonRef == 'A') {
+            this.pokemonAOut()
+            return
+        }
+        if (pokemonRef == 'B') {
+            this.pokemonBOut()
+            return
+        }
+        console.log('err in fonc pokemon out: wrong reference')
+    }
+
+    pokemonAOut() {
+        this.terrain.pokemonA.currentStats['hp'] = 0
+        this.pokeInterfaceA.update()
+        //Ici on rajoute des fonctions d'animation si besoin
+        return
+    }
+
+    pokemonBOut() {
+        this.terrain.pokemonB.currentStats['hp'] = 0
+        this.pokeInterfaceB.update()
+        alert('GG tu viens de gqgner un combat litéralement imperdable')
+        //Ici on rqjoute des fonctions d'animation si besoin
+        return
     }
 
 }
@@ -494,6 +551,7 @@ class PokeInterface {
         this.drawBackground()
         this.drawInformation()
         this.drawHPbar()
+
     }
 
     drawBackground() {
@@ -510,11 +568,13 @@ class PokeInterface {
     drawInformation() {
         this.ctx.font = '16px arial'
         this.ctx.fillStyle = 'black'
+        this.ctx.textAlign = 'left';
         this.ctx.fillText(this.pokemon.name.toUpperCase(), this.x + this.width / 10, this.gap + this.y + this.height / 6)
         this.ctx.fillText(`LV.${this.pokemon.level}`, this.x + this.width * 0.8, this.gap + this.y + this.height / 6)
     }
 
     drawHPbar() {
+
         const hpx = this.gap + this.x + this.width / 6.5
         const hpy = this.gap + this.y + this.height / 3
         const hpwidth = this.width * (0.6)
@@ -529,41 +589,50 @@ class PokeInterface {
         }
         this.ctx.font = '16px arial bold'
         this.ctx.fillStyle = 'black'
+        this.ctx.textAlign = 'left';
         this.ctx.fillText('HP', hpx - this.width / 10, hpy + hpheight)
-        this.ctx.fillText(`${this.pokemon.currentStats['hp']}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
+        this.ctx.fillText(`${Math.round(this.pokemon.currentStats['hp'])}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
         this.ctx.beginPath()
         this.ctx.fillStyle = this.colorExt
         this.ctx.roundRect(hpx, hpy, hpwidth, hpheight, [0, 10, 0, 10])
         this.ctx.fill()
         this.ctx.beginPath()
         this.ctx.fillStyle = hpcolor
-        console.log(currentHPwidth)
-        console.log(hpwidth)
+        // console.log(`hpx : ${hpx}`)
+        // console.log(`hpy : ${hpy}`);
+        // console.log(`currentHPwidth : ${currentHPwidth}`)
+        // console.log(`hpwidth : ${hpwidth}`)
+        // console.log(`text y : ${hpy + hpheight}`)
         this.ctx.roundRect(hpx, hpy, currentHPwidth, hpheight, [0, 10, 0, 10])
         this.ctx.fill()
     }
 
     update() {
         //Ici on peut faire une animation mais flemme
+        this.drawBackground()
+        this.drawInformation()
         this.drawHPbar()
+        return
     }
 }
 
 class UserInterface {
-    constructor(canvas, terrain) {
-        this.canvas = canvas
-        this.ctx = canvas.getContext('2d')
-        this.terrain = terrain
-        console.log(terrain)
+    constructor(battle) {
+        this.battle = battle
+        this.canvas = this.battle.canvas
+        this.ctx = this.canvas.getContext('2d')
+        this.terrain = this.battle.terrain
         this.menu = 'attack'
         this.colorExt = 'rgb(108,108,108)'
         this.colorInt = 'rgb(248,248,216)'
+        this.moveBaseColor = this.colorExt
         this.x = this.canvas.width / 2
         this.y = this.canvas.height * (0.70)
         this.width = this.canvas.width - this.x
         this.height = this.canvas.height - this.y
         this.gap = 10
-
+        this.mousedown = -1 //-1: la mouse n'est pas down, 0 si il est down sur le move 0, 1 si c'est le move 1, ect...
+        this.moves = [[null, null, this.moveBaseColor], [null, null, this.moveBaseColor], [null, null, this.moveBaseColor], [null, null, this.moveBaseColor]] //format : [Move, Path2D, color]
         this.initInterface()
     }
 
@@ -596,15 +665,17 @@ class UserInterface {
         const gapy = 20
         const width = 150
         const height = 60
-        console.log(this.terrain.pokemonA.currentMoves)
+        // console.log(this.terrain.pokemonA.currentMoves)
         this.terrain.pokemonA.currentMoves.forEach(move => {
             if (move != null) {
                 let x = this.x + gapx + (width + gapx) * (i % 2)
                 let y = this.y + gapy + (height + gapy) * Math.floor(i / 2)
-                this.ctx.beginPath();
-                this.ctx.fillStyle = this.colorExt
-                this.ctx.roundRect(x, y, width, height, [0])
-                this.ctx.fill()
+                this.moves[i][0] = move
+                this.moves[i][1] = new Path2D()
+                this.moves[i][1].roundRect(x, y, width, height, [0])
+                this.moves[i][1].closePath()
+                this.ctx.fillStyle = this.moves[i][2]
+                this.ctx.fill(this.moves[i][1])
                 this.ctx.font = '16px arial'
                 this.ctx.fillStyle = 'black'
                 this.ctx.textAlign = 'center';
@@ -612,6 +683,106 @@ class UserInterface {
                 i++
             }
         });
+    }
+
+    updateMoves() {
+        let i = 0
+        const gapx = 65
+        const gapy = 20
+        const width = 150
+        const height = 60
+        this.moves.forEach(moveInformation => {
+            let x = this.x + gapx + (width + gapx) * (i % 2)
+            let y = this.y + gapy + (height + gapy) * Math.floor(i / 2)
+            const move = moveInformation[0]
+            const path = moveInformation[1]
+            let color = moveInformation[2]
+            if (path == null) return
+            this.ctx.fillStyle = color
+            this.ctx.fill(path)
+            this.ctx.font = '16px arial'
+            this.ctx.fillStyle = 'black'
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`${formatMoveName(move.name)}`, x + width / 2, y + height / 2)
+            i++
+        });
+    }
+
+    onMouseMove(event) {
+        if (this.mousedown != -1) return;
+        var pos = getCanvasRelative(event)
+        //console.log(`X : ${pos.x}, Y : ${pos.y}`)
+        console.log(this.mousedown)
+        const moveIndex = this.isOnMove(pos.x, pos.y)
+        if (moveIndex == -1) {
+            this.mouseOverNothing()
+        }
+        else {
+            this.mouseOverMove(moveIndex)
+        }
+    }
+
+    onMouseRelease(event) {
+        console.log('Mouse released')
+        var pos = getCanvasRelative(event)
+        const moveIndex = this.isOnMove(pos.x, pos.y)
+        if (moveIndex == -1 || this.mousedown != moveIndex) {
+            console.log('nothinness is present')
+            this.mouseOverNothing()
+        }
+        if (moveIndex != -1) {
+            this.mouseOverMove(moveIndex)
+        } 
+        if (this.mousedown == moveIndex) {
+            this.battle.useMove(moveIndex)
+        }
+        this.mousedown = -1
+    }
+    onMouseClick(event) {
+        var pos = getCanvasRelative(event)
+        const moveIndex = this.isOnMove(pos.x, pos.y)
+        if (moveIndex == -1) return;
+        this.mousedown = moveIndex
+        this.clickOnMove(moveIndex)
+        return
+    }
+
+    /**4
+     * Fonction qui donne le move sur lequel la souri est
+     * @param {int} x x coordinate in canvas
+     * @param {int} y y coordinate in canvas
+     * @returns moveindex si la souris est sur un move, -1 sinon 
+     */
+    isOnMove(x, y) {
+        for (let index = 0; index < this.moves.length; index++) {
+            const moveInformation = this.moves[index]
+            const path = moveInformation[1]
+            if (this.ctx.isPointInPath(path, x, y)) {
+                return index
+            }
+        }
+        return -1
+    }
+
+    mouseOverNothing() {
+        this.moves.forEach(moveInformation => {
+            moveInformation[2] = this.moveBaseColor
+        })
+        this.updateMoves()
+    }
+
+    mouseOverMove(moveIndex) {
+        const overColor = 'rgb(255,165,0)'
+        this.moves[moveIndex][2] = overColor
+        this.updateMoves()
+        return
+    }
+
+    clickOnMove(moveIndex) {
+        console.log(`Move ${moveIndex} used`);
+        const clickColor = 'rgb(255,140,0)'
+        this.moves[moveIndex][2] = clickColor
+        this.updateMoves()
     }
 }
 
@@ -632,7 +803,7 @@ const combatBasique = async () => {
     charizard.currentStats['hp'] -= 50
 
     const combat = new Combat(document.querySelector('canvas'), terrain)
-    combat.useMove(0)
 }
+
 
 combatBasique()
