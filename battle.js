@@ -10,6 +10,7 @@ canvas.height = 576;
 
 
 //Je compte mettre touts les lien graphiques en cache séparément 
+//Ok cette idée c'est de la merde
 
 
 var getCanvasRelative = function (e) {
@@ -449,7 +450,6 @@ class Combat {
         pokeAImg.src = localStorage.getItem(this.terrain.pokemonA.name + '-back')
         var pokeBImg = new Image()
         pokeBImg.src = localStorage.getItem(this.terrain.pokemonB.name + '-front')
-        console.log(pokeAImg)
         console.log(`Height = ${this.height}, Width = ${this.width}`)
         this.ctx.drawImage(pokeAImg, this.width / 15, this.height / 2.5, pokeAImg.naturalWidth * 3, pokeAImg.naturalHeight * 3)
         this.ctx.drawImage(pokeBImg, this.width * 0.6, this.height / 7, pokeAImg.naturalWidth * 2.7, pokeAImg.naturalHeight * 2.7)
@@ -544,6 +544,9 @@ class PokeInterface {
         this.colorInt = 'rgb(248,248,216)'
         this.gap = gap
         this.curve = curve
+        this.healthBar = null
+        this.healthBarCurrentHp = this.pokemon.currentStats['hp']
+        this.deltaHp = 0
         this.initInterface()
     }
 
@@ -579,40 +582,51 @@ class PokeInterface {
         const hpy = this.gap + this.y + this.height / 3
         const hpwidth = this.width * (0.6)
         const hpheight = this.height * 0.15
-        const currentHPwidth = hpwidth * (this.pokemon.currentStats['hp'] / this.pokemon.stats['hp'])
+        const currentHPwidth = hpwidth * (this.healthBarCurrentHp / this.pokemon.stats['hp'])
+        this.healthBar = new Path2D()
         var hpcolor = 'green'
-        if (4 * this.pokemon.currentStats['hp'] < this.pokemon.stats['hp']) {
+        if (4 * this.healthBarCurrentHp < this.pokemon.stats['hp']) {
             hpcolor = 'red'
         }
-        else if (2 * this.pokemon.currentStats['hp'] < this.pokemon.stats['hp']) {
+        else if (2 * this.healthBarCurrentHp < this.pokemon.stats['hp']) {
             hpcolor = 'orange'
         }
         this.ctx.font = '16px arial bold'
         this.ctx.fillStyle = 'black'
         this.ctx.textAlign = 'left';
         this.ctx.fillText('HP', hpx - this.width / 10, hpy + hpheight)
-        this.ctx.fillText(`${Math.round(this.pokemon.currentStats['hp'])}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
-        this.ctx.beginPath()
+        this.ctx.fillText(`${Math.round(this.healthBarCurrentHp)}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
         this.ctx.fillStyle = this.colorExt
+        this.ctx.beginPath()
         this.ctx.roundRect(hpx, hpy, hpwidth, hpheight, [0, 10, 0, 10])
         this.ctx.fill()
-        this.ctx.beginPath()
         this.ctx.fillStyle = hpcolor
-        // console.log(`hpx : ${hpx}`)
-        // console.log(`hpy : ${hpy}`);
-        // console.log(`currentHPwidth : ${currentHPwidth}`)
-        // console.log(`hpwidth : ${hpwidth}`)
-        // console.log(`text y : ${hpy + hpheight}`)
-        this.ctx.roundRect(hpx, hpy, currentHPwidth, hpheight, [0, 10, 0, 10])
-        this.ctx.fill()
+        this.healthBar.roundRect(hpx, hpy, currentHPwidth, hpheight, [0, 10, 0, 10])
+        this.ctx.fill(this.healthBar)
     }
 
     update() {
         //Ici on peut faire une animation mais flemme
+        this.healthBarAnimation()
+        return
+    }
+
+    healthBarAnimation() {
+        console.log('yeet')
+        if (this.healthBarCurrentHp <= this.pokemon.currentStats['hp']) {
+            this.healthBarCurrentHp = this.pokemon.currentStats['hp']
+            this.deltaHp = 0
+            return
+        }
+        const numberOfFrames = 2*60
+        if (this.deltaHp == 0) {
+            this.deltaHp = (this.healthBarCurrentHp - this.pokemon.currentStats['hp'])/ numberOfFrames
+        }
+        this.healthBarCurrentHp -= this.deltaHp;
         this.drawBackground()
         this.drawInformation()
         this.drawHPbar()
-        return
+        window.requestAnimationFrame(this.healthBarAnimation.bind(this));
     }
 }
 
@@ -672,7 +686,7 @@ class UserInterface {
                 let y = this.y + gapy + (height + gapy) * Math.floor(i / 2)
                 this.moves[i][0] = move
                 this.moves[i][1] = new Path2D()
-                this.moves[i][1].roundRect(x, y, width, height, [0])
+                this.moves[i][1].roundRect(x, y, width, height, [5])
                 this.moves[i][1].closePath()
                 this.ctx.fillStyle = this.moves[i][2]
                 this.ctx.fill(this.moves[i][1])
@@ -712,7 +726,6 @@ class UserInterface {
         if (this.mousedown != -1) return;
         var pos = getCanvasRelative(event)
         //console.log(`X : ${pos.x}, Y : ${pos.y}`)
-        console.log(this.mousedown)
         const moveIndex = this.isOnMove(pos.x, pos.y)
         if (moveIndex == -1) {
             this.mouseOverNothing()
@@ -727,15 +740,15 @@ class UserInterface {
         var pos = getCanvasRelative(event)
         const moveIndex = this.isOnMove(pos.x, pos.y)
         if (moveIndex == -1 || this.mousedown != moveIndex) {
-            console.log('nothinness is present')
             this.mouseOverNothing()
         }
         if (moveIndex != -1) {
             this.mouseOverMove(moveIndex)
+            if (this.mousedown == moveIndex) {
+                this.battle.useMove(moveIndex)
+            }
         } 
-        if (this.mousedown == moveIndex) {
-            this.battle.useMove(moveIndex)
-        }
+        
         this.mousedown = -1
     }
     onMouseClick(event) {
@@ -785,6 +798,15 @@ class UserInterface {
         this.updateMoves()
     }
 }
+
+//Je commence une nouvelle classe qui sera l'interface globale, car je suis en train de faire de la grosse merde avec la classe combat
+// et le code sera vite encore plus imbitable
+
+// class Interface {
+//     constructor() {
+//         this.interfaces = [] // Une liste des interfaces filles (en gros dans la cas actuel du projet c'es)
+//     }
+// }
 
 
 const combatBasique = async () => {
