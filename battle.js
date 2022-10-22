@@ -396,8 +396,10 @@ class Terrain {
 }
 
 class Combat {
-    constructor(canvas, terrain) {
-        this.canvas = canvas
+    constructor(InterfaceGlobale, terrain) {
+        this.interfaceGlobale = InterfaceGlobale
+        this.interfaceGlobale.currentMode = 'combat'
+        this.canvas = this.interfaceGlobale.canvas
         this.terrain = terrain
         this.ctx = canvas.getContext("2d");
         this.ctx.imageSmoothingEnabled = false;
@@ -410,71 +412,30 @@ class Combat {
         this.pokeInterfaceA = null
         this.pokeInterfaceB = null
         this.UserInterface = null
-        this.initCanvas()
+        this.initCombatMode()
     }
 
-    initCanvas() {
-        this.drawBackground()
-        this.drawPokemons()
-        this.drawPokeInterface()
-        this.drawUserInterface()
-        // console.log(this.UserInterface)
-        // createEventListener(this, this.UserInterface)
-        var fClick = this.UserInterface.onMouseClick.bind(this.UserInterface)
-        this.canvas.addEventListener('mousedown', fClick)
-        var fMove = this.UserInterface.onMouseMove.bind(this.UserInterface)
-        this.canvas.addEventListener('mousemove', fMove)
-        var fRelease = this.UserInterface.onMouseRelease.bind(this.UserInterface)
-        this.canvas.addEventListener('mouseup', fRelease)
+
+    initCombatMode() {
+        this.initBackground()
+        this.initPokeInterface()
+        this.initUserInterface()
     }
 
-    drawBackground() {
-        const horizon = this.height * 0.3;
-        // This creates the sky gradient (from a darker blue to white at the bottom)
-        const sky = this.ctx.createLinearGradient(0, 0, 0, horizon);
-        sky.addColorStop(0.0, 'rgb(55,121,179)');
-        sky.addColorStop(0.7, 'rgb(121,194,245)');
-        sky.addColorStop(1.0, 'rgb(164,200,214)');
-        // this creates the grass gradient (from a darker green to a lighter green)
-        const earth = this.ctx.createLinearGradient(0, horizon, 0, this.height);
-        earth.addColorStop(0.0, 'rgb(81,140,20)');
-        earth.addColorStop(1.0, 'rgb(123,177,57)');
-        this.ctx.fillStyle = sky;
-        this.ctx.fillRect(0, 0, this.width, horizon);
-        this.ctx.fillStyle = earth;
-        this.ctx.fillRect(0, horizon, this.width, this.height - horizon);
+    initBackground() {
+        console.log('backgrf')
+        this.interfaceGlobale.addInterface(new Background(this.canvas))
     }
 
-    drawPokemons() {
-        var pokeAImg = new Image()
-        pokeAImg.src = localStorage.getItem(this.terrain.pokemonA.name + '-back')
-        var pokeBImg = new Image()
-        pokeBImg.src = localStorage.getItem(this.terrain.pokemonB.name + '-front')
-        console.log(`Height = ${this.height}, Width = ${this.width}`)
-        this.ctx.drawImage(pokeAImg, this.width / 15, this.height / 2.5, pokeAImg.naturalWidth * 3, pokeAImg.naturalHeight * 3)
-        this.ctx.drawImage(pokeBImg, this.width * 0.6, this.height / 7, pokeAImg.naturalWidth * 2.7, pokeAImg.naturalHeight * 2.7)
+    
+
+    initPokeInterface() {
+        this.interfaceGlobale.addInterface(new PokeInterface(this, 'A'))
+        this.interfaceGlobale.addInterface(new PokeInterface(this, 'B'))
     }
 
-    drawPokeInterface() {
-        const gap = 10
-        let width = 275
-        let height = 75
-        let x = this.canvas.width / 2
-        let y = 325
-        let curve = [10]
-        this.pokeInterfaceA = new PokeInterface(this.canvas, this.terrain.pokemonA, x, y, width, height, gap, curve)
-        x = 120
-        y = 100
-        width = 275
-        height = 75
-        curve = [10]
-        // console.log(this.terrain)
-        this.pokeInterfaceB = new PokeInterface(this.canvas, this.terrain.pokemonB, x, y, width, height, gap, curve)
-
-    }
-
-    drawUserInterface() {
-        this.UserInterface = new UserInterface(this)
+    initUserInterface() {
+        this.interfaceGlobale.addInterface(new UserInterface(this))
     }
 
     useMove(moveIndex) {
@@ -484,9 +445,6 @@ class Combat {
             console.log(`PokeB Hp : ${this.terrain.pokemonB.currentStats['hp']}`)
             if (this.terrain.pokemonB.currentStats['hp'] <= 0) {
                 this.pokemonOut('B')
-            }
-            else {
-                this.pokeInterfaceB.update()
             }
         }
         if (res[0] == 'statusA') {
@@ -516,14 +474,12 @@ class Combat {
 
     pokemonAOut() {
         this.terrain.pokemonA.currentStats['hp'] = 0
-        this.pokeInterfaceA.update()
         //Ici on rajoute des fonctions d'animation si besoin
         return
     }
 
     pokemonBOut() {
         this.terrain.pokemonB.currentStats['hp'] = 0
-        this.pokeInterfaceB.update()
         alert('GG tu viens de gqgner un combat litéralement imperdable')
         //Ici on rqjoute des fonctions d'animation si besoin
         return
@@ -532,101 +488,65 @@ class Combat {
 }
 
 class PokeInterface {
-    constructor(canvas, pokemon, x, y, width, height, gap = 10, curve = [20, 0, 20, 20]) {
-        this.canvas = canvas
-        this.ctx = canvas.getContext('2d')
-        this.pokemon = pokemon
-        this.x = x
-        this.y = y
-        this.width = width
-        this.height = height
-        this.colorExt = 'rgb(108,108,108)'
-        this.colorInt = 'rgb(248,248,216)'
-        this.gap = gap
-        this.curve = curve
-        this.healthBar = null
-        this.healthBarCurrentHp = this.pokemon.currentStats['hp']
-        this.deltaHp = 0
-        this.initInterface()
+    constructor(combat, team) {
+        this.combat = combat
+        this.canvas = this.combat.canvas
+        this.ctx = this.canvas.getContext('2d')
+        this.team = team
+        this.pokemon = null
+        this.infoWindow = null
+        this.pokeSprite = null
+        this.getNewPokemon()
     }
 
-    initInterface() {
-        this.drawBackground()
-        this.drawInformation()
-        this.drawHPbar()
-
-    }
-
-    drawBackground() {
-        this.ctx.beginPath();
-        this.ctx.fillStyle = this.colorExt
-        this.ctx.roundRect(this.x, this.y, this.width, this.height, this.curve)
-        this.ctx.fill()
-        this.ctx.beginPath();
-        this.ctx.fillStyle = this.colorInt
-        this.ctx.roundRect(this.x + (this.gap / 2), this.y + (this.gap / 2), this.width - this.gap, this.height - this.gap, this.curve)
-        this.ctx.fill()
-    }
-
-    drawInformation() {
-        this.ctx.font = '16px arial'
-        this.ctx.fillStyle = 'black'
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(this.pokemon.name.toUpperCase(), this.x + this.width / 10, this.gap + this.y + this.height / 6)
-        this.ctx.fillText(`LV.${this.pokemon.level}`, this.x + this.width * 0.8, this.gap + this.y + this.height / 6)
-    }
-
-    drawHPbar() {
-
-        const hpx = this.gap + this.x + this.width / 6.5
-        const hpy = this.gap + this.y + this.height / 3
-        const hpwidth = this.width * (0.6)
-        const hpheight = this.height * 0.15
-        const currentHPwidth = hpwidth * (this.healthBarCurrentHp / this.pokemon.stats['hp'])
-        this.healthBar = new Path2D()
-        var hpcolor = 'green'
-        if (4 * this.healthBarCurrentHp < this.pokemon.stats['hp']) {
-            hpcolor = 'red'
+    getNewPokemon() {
+        if (this.team == 'A') {
+            this.pokemon = this.combat.terrain.pokemonA
         }
-        else if (2 * this.healthBarCurrentHp < this.pokemon.stats['hp']) {
-            hpcolor = 'orange'
+
+        if (this.team == 'B') {
+            this.pokemon = this.combat.terrain.pokemonB
         }
-        this.ctx.font = '16px arial bold'
-        this.ctx.fillStyle = 'black'
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText('HP', hpx - this.width / 10, hpy + hpheight)
-        this.ctx.fillText(`${Math.round(this.healthBarCurrentHp)}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
-        this.ctx.fillStyle = this.colorExt
-        this.ctx.beginPath()
-        this.ctx.roundRect(hpx, hpy, hpwidth, hpheight, [0, 10, 0, 10])
-        this.ctx.fill()
-        this.ctx.fillStyle = hpcolor
-        this.healthBar.roundRect(hpx, hpy, currentHPwidth, hpheight, [0, 10, 0, 10])
-        this.ctx.fill(this.healthBar)
+        this.initPokemon()
+        this.initInfoWindow()
     }
 
-    update() {
-        //Ici on peut faire une animation mais flemme
-        this.healthBarAnimation()
+    initPokemon() {
+        var spriteType = '-back'
+        var x = 200
+        var y = 400
+        if (this.team == 'B') {
+            spriteType = '-front'
+            x = 800
+            y = 200
+        }
+        const sprite = new Image()
+        sprite.src = localStorage.getItem(this.pokemon.name + spriteType)
+        this.pokeSprite = new PokeSprite(this.canvas, {x : x, y : y}, sprite)
         return
     }
 
-    healthBarAnimation() {
-        console.log('yeet')
-        if (this.healthBarCurrentHp <= this.pokemon.currentStats['hp']) {
-            this.healthBarCurrentHp = this.pokemon.currentStats['hp']
-            this.deltaHp = 0
-            return
+    initInfoWindow() {
+        var x = this.canvas.width / 2
+        var y = 325
+        if (this.team == 'B') {
+            x = 75
+            y = 100
         }
-        const numberOfFrames = 2*60
-        if (this.deltaHp == 0) {
-            this.deltaHp = (this.healthBarCurrentHp - this.pokemon.currentStats['hp'])/ numberOfFrames
+        this.infoWindow = new InfoWindow(this.canvas, {x : x, y : y}, this.pokemon)
+    }
+
+    drawPokemons() {
+        this.ctx.drawImage(pokeImg, this.width * 0.6, this.height / 7, pokeAImg.naturalWidth * 2.7, pokeAImg.naturalHeight * 2.7)
+    }
+
+    update() { 
+        if (this.infoWindow != null) {
+            this.infoWindow.update()
         }
-        this.healthBarCurrentHp -= this.deltaHp;
-        this.drawBackground()
-        this.drawInformation()
-        this.drawHPbar()
-        window.requestAnimationFrame(this.healthBarAnimation.bind(this));
+        if (this.pokeSprite != null) {
+            this.pokeSprite.update()
+        }
     }
 }
 
@@ -637,6 +557,7 @@ class UserInterface {
         this.ctx = this.canvas.getContext('2d')
         this.terrain = this.battle.terrain
         this.menu = 'attack'
+        //def des couleurs 
         this.colorExt = 'rgb(108,108,108)'
         this.colorInt = 'rgb(248,248,216)'
         this.moveBaseColor = this.colorExt
@@ -647,10 +568,9 @@ class UserInterface {
         this.gap = 10
         this.mousedown = -1 //-1: la mouse n'est pas down, 0 si il est down sur le move 0, 1 si c'est le move 1, ect...
         this.moves = [[null, null, this.moveBaseColor], [null, null, this.moveBaseColor], [null, null, this.moveBaseColor], [null, null, this.moveBaseColor]] //format : [Move, Path2D, color]
-        this.initInterface()
     }
 
-    initInterface() {
+    update() { 
         this.drawBackground()
         this.drawFrontground()
     }
@@ -799,14 +719,243 @@ class UserInterface {
     }
 }
 
+class InfoWindow {
+    constructor(canvas, pos, pokemon) {
+        this.canvas = canvas
+        this.ctx = this.canvas.getContext('2d')
+        this.x = pos.x
+        this.y = pos.y
+        this.pokemon = pokemon
+        this.healthBarCurrentHp = pokemon.currentStats['hp']
+        this.healthBar = null
+        this.deltaHp = 0
+        // ------------------------------------------------------
+        // Des var accesible pour pouvoir edit la gueule des trucs
+        this.gap = 10 
+        this.width = 275
+        this.height = 75
+        this.curve = [10]
+        //def des couleurs utiles
+        this.colorExt = 'rgb(108,108,108)'
+        this.colorInt = 'rgb(248,248,216)'
+        // ------------------------------------------------------
+    }
+
+    
+    drawBackground() {
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.colorExt
+        this.ctx.roundRect(this.x, this.y, this.width, this.height, this.curve)
+        this.ctx.fill()
+        this.ctx.beginPath();
+        this.ctx.fillStyle = this.colorInt
+        this.ctx.roundRect(this.x + (this.gap / 2), this.y + (this.gap / 2), this.width - this.gap, this.height - this.gap, this.curve)
+        this.ctx.fill()
+    }
+
+    drawInformation() {
+        this.ctx.font = '16px arial'
+        this.ctx.fillStyle = 'black'
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(this.pokemon.name.toUpperCase(), this.x + this.width / 10, this.gap + this.y + this.height / 6)
+        this.ctx.fillText(`LV.${this.pokemon.level}`, this.x + this.width * 0.8, this.gap + this.y + this.height / 6)
+    }
+
+    drawHPbar() {
+        const hpx = this.gap + this.x + this.width / 6.5
+        const hpy = this.gap + this.y + this.height / 3
+        const hpwidth = this.width * (0.6)
+        const hpheight = this.height * 0.15
+        const currentHPwidth = hpwidth * (this.healthBarCurrentHp / this.pokemon.stats['hp'])
+        this.healthBar = new Path2D()
+        var hpcolor = 'green'
+        if (4 * this.healthBarCurrentHp < this.pokemon.stats['hp']) {
+            hpcolor = 'red'
+        }
+        else if (2 * this.healthBarCurrentHp < this.pokemon.stats['hp']) {
+            hpcolor = 'orange'
+        }
+        this.ctx.font = '16px arial bold'
+        this.ctx.fillStyle = 'black'
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText('HP', hpx - this.width / 10, hpy + hpheight)
+        this.ctx.fillText(`${Math.round(this.healthBarCurrentHp)}/${this.pokemon.stats['hp']}`, hpx + hpwidth, hpy + hpheight)
+        this.ctx.fillStyle = this.colorExt
+        this.ctx.beginPath()
+        this.ctx.roundRect(hpx, hpy, hpwidth, hpheight, [0, 10, 0, 10])
+        this.ctx.fill()
+        this.ctx.fillStyle = hpcolor
+        this.healthBar.roundRect(hpx, hpy, currentHPwidth, hpheight, [0, 10, 0, 10])
+        this.ctx.fill(this.healthBar)
+    }
+
+    update() {
+        //Ici on peut faire une animation mais flemme
+        this.healthBarAnimation()
+        this.drawBackground()
+        this.drawInformation()
+        this.drawHPbar()
+        return
+    }
+
+    healthBarAnimation() {
+        if (this.healthBarCurrentHp <= this.pokemon.currentStats['hp']) {
+            this.healthBarCurrentHp = this.pokemon.currentStats['hp']
+            this.deltaHp = 0
+            return
+        }
+        const numberOfFrames = 2*60
+        if (this.deltaHp == 0) {
+            this.deltaHp = (this.healthBarCurrentHp - this.pokemon.currentStats['hp'])/ numberOfFrames
+        }
+        this.healthBarCurrentHp -= this.deltaHp;
+    }
+}
+
+class PokeSprite {
+    constructor(canvas, pos , sprite) {
+        this.canvas = canvas
+        this.ctx = this.canvas.getContext('2d')
+        this.x = pos.x
+        this.y = pos.y
+        this.sprite = sprite
+    }
+
+    update() {
+        this.draw()
+    }
+
+    draw() {
+        //On calcule un coef pour avoir un effet d'eloignement des pokemons
+        const multiplier = 2.2 + (this.y / this.canvas.width)
+        const width = this.sprite.naturalWidth * multiplier
+        const height = this.sprite.naturalHeight * multiplier
+        //Les coord this.x et this.y sont les coord du centre du sprite, on fait donc ici une conversion
+        const x = this.x - (width / 2)
+        const y = this.y - (height / 2)
+        //Et on dessine
+        this.ctx.drawImage(this.sprite, x, y, width, height)
+    }
+
+    
+}
+
+
+class Background {
+    constructor(canvas) {
+        this.canvas = canvas
+        this.ctx = this.canvas.getContext('2d')
+        this.sol = [new Path2D(), null] //Le path et le gradient pour le fill
+        this.ciel = [new Path2D(), null]
+        this.intiBackground()
+    }
+
+    intiBackground() {
+        const horizon = this.canvas.height * 0.3;
+        // Les path2d
+        this.sol[0].rect(0, horizon, this.canvas.width, this.canvas.height - horizon)
+        this.ciel[0].rect(0, 0, this.canvas.width, horizon)
+        // Les grad
+        this.ciel[1] = this.ctx.createLinearGradient(0, 0, 0, horizon);
+        this.ciel[1].addColorStop(0.0, 'rgb(55,121,179)');
+        this.ciel[1].addColorStop(0.7, 'rgb(121,194,245)');
+        this.ciel[1].addColorStop(1.0, 'rgb(164,200,214)');
+        this.sol[1] = this.ctx.createLinearGradient(0, horizon, 0, this.canvas.height);
+        this.sol[1].addColorStop(0.0, 'rgb(81,140,20)');
+        this.sol[1].addColorStop(1.0, 'rgb(123,177,57)');
+    }
+
+    update() {
+        this.ctx.fillStyle = this.sol[1]
+        this.ctx.fill(this.sol[0])
+        this.ctx.fillStyle = this.ciel[1]
+        this.ctx.fill(this.ciel[0])
+    }
+}
+
 //Je commence une nouvelle classe qui sera l'interface globale, car je suis en train de faire de la grosse merde avec la classe combat
 // et le code sera vite encore plus imbitable
 
-// class Interface {
-//     constructor() {
-//         this.interfaces = [] // Une liste des interfaces filles (en gros dans la cas actuel du projet c'es)
-//     }
-// }
+class InterfaceGlobale {
+    constructor(canvas) {
+        this.canvas = canvas
+        this.interfaces = [] // Une liste des interfaces filles (en gros dans la cas actuel du projet c'es)
+        this.currentMode = 'none'
+        this.initCanvas()
+        this.tick()
+    }
+
+    addInterface(interfaceToAdd) {
+        if (interfaceToAdd == null) return;
+        this.interfaces.push(interfaceToAdd)
+    }
+
+    removeInterface(interfaceToRemove) {
+        if (interfaceToRemove == null) return;
+        for (let index = 0; index < this.interfaces.length; index++) {
+            const currentInterface = array[index];
+            if (currentInterface == interfaceToRemove) {
+                this.interfaces.splice(index, 1)
+            }
+        }
+    }
+
+    getInterfaceOfType(type) {
+        var interfaceList =[]
+        this.interfaces.forEach(inter => {
+            if (inter instanceof type) {
+                interfaceList.push(inter)
+            }
+        });
+        return interfaceList
+    }
+
+    tick() {
+        this.update()
+        window.requestAnimationFrame(this.tick.bind(this))
+    }
+    
+    update() {
+        this.interfaces.forEach(inter => {
+            if (inter != null) {
+                inter.update()
+            }
+        });
+    }
+
+    initCanvas() {
+        var fClick = this.onMouseClick.bind(this)
+        this.canvas.addEventListener('mousedown', fClick)
+        var fMove = this.onMouseMove.bind(this)
+        this.canvas.addEventListener('mousemove', fMove)
+        var fRelease = this.onMouseRelease.bind(this)
+        this.canvas.addEventListener('mouseup', fRelease)
+    }
+
+    onMouseClick(e) {
+        this.interfaces.forEach(inter => {
+            if (typeof inter.onMouseClick == 'function') {
+                inter.onMouseClick(e)
+            }
+        });
+    }
+
+    onMouseMove(e) {
+        this.interfaces.forEach(inter => {
+            if (typeof inter.onMouseMove == 'function') {
+                inter.onMouseMove(e)
+            }
+        });
+    }
+
+    onMouseRelease(e) {
+        this.interfaces.forEach(inter => {
+            if (typeof inter.onMouseRelease == 'function') {
+                inter.onMouseRelease(e)
+            }
+        });
+    }
+}
 
 
 const combatBasique = async () => {
@@ -824,7 +973,10 @@ const combatBasique = async () => {
     await charizard.useMove(1, pikachu, 5)
     charizard.currentStats['hp'] -= 50
 
-    const combat = new Combat(document.querySelector('canvas'), terrain)
+    const interfaceGlobale = new InterfaceGlobale(document.querySelector('canvas'))
+
+    const combat = new Combat(interfaceGlobale, terrain)
+    console.log(typeof combat)
 }
 
 
