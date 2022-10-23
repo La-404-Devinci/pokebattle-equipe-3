@@ -430,8 +430,10 @@ class Combat {
     
 
     initPokeInterface() {
-        this.interfaceGlobale.addInterface(new PokeInterface(this, 'A'))
-        this.interfaceGlobale.addInterface(new PokeInterface(this, 'B'))
+        this.pokeInterfaceA = new PokeInterface(this, 'A')
+        this.pokeInterfaceB = new PokeInterface(this, 'B')
+        this.interfaceGlobale.addInterface(this.pokeInterfaceA)
+        this.interfaceGlobale.addInterface(this.pokeInterfaceB)
     }
 
     initUserInterface() {
@@ -441,6 +443,7 @@ class Combat {
     useMove(moveIndex) {
         const res = this.terrain.pokemonA.useMove(moveIndex, this.terrain.pokemonB)
         if (res[0].includes('damage')) {
+            this.pokeInterfaceA.attackAnimation()
             this.terrain.pokemonB.currentStats['hp'] -= res[1]
             console.log(`PokeB Hp : ${this.terrain.pokemonB.currentStats['hp']}`)
             if (this.terrain.pokemonB.currentStats['hp'] <= 0) {
@@ -452,7 +455,6 @@ class Combat {
                 this.terrain.pokemonA.addStatStage(stat[0], stat[1])
             });
         }
-        //this.pokeInterfaceB.update()
     }
 
     /**
@@ -522,7 +524,7 @@ class PokeInterface {
         }
         const sprite = new Image()
         sprite.src = localStorage.getItem(this.pokemon.name + spriteType)
-        this.pokeSprite = new PokeSprite(this.canvas, {x : x, y : y}, sprite)
+        this.pokeSprite = new PokeSprite(this, {x : x, y : y}, sprite)
         return
     }
 
@@ -547,6 +549,10 @@ class PokeInterface {
         if (this.pokeSprite != null) {
             this.pokeSprite.update()
         }
+    }
+
+    attackAnimation() {
+        this.pokeSprite.attackAnimation()
     }
 }
 
@@ -791,11 +797,15 @@ class InfoWindow {
 
     update() {
         //Ici on peut faire une animation mais flemme
-        this.healthBarAnimation()
+        this.animations() //on fait toutes les animations dans cette fonction
         this.drawBackground()
         this.drawInformation()
         this.drawHPbar()
         return
+    }
+
+    animations() {
+        this.healthBarAnimation()
     }
 
     healthBarAnimation() {
@@ -813,28 +823,102 @@ class InfoWindow {
 }
 
 class PokeSprite {
-    constructor(canvas, pos , sprite) {
-        this.canvas = canvas
+    constructor(pokeInterface, pos , sprite) {
+        this.pokeInterface = pokeInterface
+        this.canvas = this.pokeInterface.canvas
         this.ctx = this.canvas.getContext('2d')
-        this.x = pos.x
-        this.y = pos.y
+        this.pos = pos
+        this.absolutePos = pos
         this.sprite = sprite
+        this.isAttacking = 0 // C'est en gros le compteur de frame d'animation de l'attaque, donc si c'est = 0 il n'y a pas d'animation
+        this.speed = {
+            x : 0,
+            y : 0
+        }
+        this.animationTiming = { //ptit espace pour stocker les key frames d'animation 
+            attack : {
+                moveForward : 0.3 * 60,
+                moveBackward : 0.6 * 60
+            }
+        }
     }
 
     update() {
+        this.animations()//on fait toutes les animations dans cette fonction
         this.draw()
+    }
+    
+    animations() {
+        if (this.isAttacking != 0) this.attackAnimation()
     }
 
     draw() {
         //On calcule un coef pour avoir un effet d'eloignement des pokemons
-        const multiplier = 2.2 + (this.y / this.canvas.width)
+        const multiplier = 2.2 + (this.pos.y / this.canvas.width)
         const width = this.sprite.naturalWidth * multiplier
         const height = this.sprite.naturalHeight * multiplier
         //Les coord this.x et this.y sont les coord du centre du sprite, on fait donc ici une conversion
-        const x = this.x - (width / 2)
-        const y = this.y - (height / 2)
+        const x = this.pos.x - (width / 2)
+        const y = this.pos.y - (height / 2)
         //Et on dessine
         this.ctx.drawImage(this.sprite, x, y, width, height)
+    }
+
+    attackAnimation() {
+        this.isAttacking++
+        console.log(this.isAttacking)
+        const dx = 1
+        const dy = 2
+        
+        // if (this.isAttacking == 0) {
+        //     //Des constantes pour modif la vitesse des animations
+        //     //Si on rentre ici c'est que l'attaque viens de commencer
+        //     if (this.pos.y > (this.canvas.height/2)) {
+        //         //On est donc sur le pokemon supérieur de l'écran
+        //         this.speed.x = - dx
+        //         this.speed.y = - dy
+        //     }
+        //     else{
+        //         this.speed.x = dx
+        //         this.speed.y = dy
+        //     }
+        // }
+        if (this.isAttacking <= this.animationTiming.attack.moveForward) {
+            if (this.pokeInterface.team == 'A') {
+                //On est donc sur le pokemon inf de l'écran
+                this.speed.x =  dx
+                this.speed.y = - dy
+            }
+            else{
+                this.speed.x = - dx
+                this.speed.y = dy
+            }
+        }
+        else if (this.isAttacking <= this.animationTiming.attack.moveBackward) {
+            if (this.pokeInterface.team == 'A') {
+                //On est donc sur le pokemon inf de l'écran
+                this.speed.x = - dx
+                this.speed.y =   dy
+            }
+            else{
+                this.speed.x =   dx
+                this.speed.y = - dy
+            }
+        }
+        else {
+            //Si on rentre ici c'est que l'animation est finito
+            this.isAttacking = 0
+            this.speed.x = 0
+            this.speed.y = 0
+            this.pos = this.absolutePos
+        }
+        this.move()
+    }
+
+    move() {
+        //On integre la speed
+        this.pos.x += this.speed.x
+        this.pos.y += this.speed.y
     }
 
     
