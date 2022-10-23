@@ -4,7 +4,7 @@ canvas.width = 1024;
 canvas.height = 576;
 
 
-
+//console.log
 //ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 
@@ -43,7 +43,7 @@ const createMoveFromName = async (name) => {
     const url= `https://pokeapi.co/api/v2/move/${name}`
     const response = await fetch(url)
     const data = await response.json()
-    console.log(data)
+    //console.log(data)
     return new Move(data)
 }
 */
@@ -111,7 +111,7 @@ const getADStats = (move, pokeATT, pokeDEF) => {
         DefenseStat = pokeDEF.stats['special-defense']
     }
     else if (move.dclass === 'physical') {
-        AttackStat = pokeATT.stat['attack']
+        AttackStat = pokeATT.stats['attack']
         DefenseStat = pokeDEF.stats['defense']
     }
     return [AttackStat, DefenseStat]
@@ -318,7 +318,8 @@ class Pokemon {
     }
 
     useAttackMove(moveIndex, pokemon) {
-        return damageCalculationGen5Onward(pokemon.currentMoves[moveIndex], this, pokemon)
+        //console.log(pokemon.currentMoves)
+        return damageCalculationGen5Onward(this.currentMoves[moveIndex], this, pokemon)
     }
 
     addStatStage(statName, value) {
@@ -352,6 +353,7 @@ class Move {
         this.power = movejson.power
         this.type = movejson.type.name
         this.types = {} // dict qui donne la relation entre les différent le move est les types
+        //console.log(movejson.damage_class.name)
         this.dclass = movejson.damage_class.name
         this.category = movejson.meta.category.name
         this.ailment = movejson.meta.ailment.name
@@ -392,6 +394,8 @@ class Terrain {
                 pokemon.setTeam('B')
             }
         });
+        console.log(this.pokemonA)
+        console.log(this.pokemonB)
     }
 }
 
@@ -405,7 +409,7 @@ class Combat {
         this.ctx.imageSmoothingEnabled = false;
         this.width = this.canvas.width;
         this.height = this.canvas.height;
-        console.log(this.ctx)
+        //console.log(this.ctx)
         if (this.terrain.pokemonA == null || this.terrain.pokemonB == null) {
             alert("il n'y a pas de pokemon dans une ou deux des teams")
         }
@@ -423,11 +427,11 @@ class Combat {
     }
 
     initBackground() {
-        console.log('backgrf')
+        //console.log('backgrf')
         this.interfaceGlobale.addInterface(new Background(this.canvas))
     }
 
-    
+
 
     initPokeInterface() {
         this.pokeInterfaceA = new PokeInterface(this, 'A')
@@ -445,7 +449,7 @@ class Combat {
         if (res[0].includes('damage')) {
             this.pokeInterfaceA.attackAnimation()
             this.terrain.pokemonB.currentStats['hp'] -= res[1]
-            console.log(`PokeB Hp : ${this.terrain.pokemonB.currentStats['hp']}`)
+            //console.log(`PokeB Hp : ${this.terrain.pokemonB.currentStats['hp']}`)
             if (this.terrain.pokemonB.currentStats['hp'] <= 0) {
                 this.pokemonOut('B')
             }
@@ -471,18 +475,20 @@ class Combat {
             this.pokemonBOut()
             return
         }
-        console.log('err in fonc pokemon out: wrong reference')
+        //console.log('err in fonc pokemon out: wrong reference')
     }
 
     pokemonAOut() {
         this.terrain.pokemonA.currentStats['hp'] = 0
+        this.pokeInterfaceA.koAnimation()
         //Ici on rajoute des fonctions d'animation si besoin
         return
     }
 
     pokemonBOut() {
         this.terrain.pokemonB.currentStats['hp'] = 0
-        alert('GG tu viens de gqgner un combat litéralement imperdable')
+        this.pokeInterfaceB.koAnimation()
+        console.log('GG tu viens de gqgner un combat litéralement imperdable')
         //Ici on rqjoute des fonctions d'animation si besoin
         return
     }
@@ -524,7 +530,7 @@ class PokeInterface {
         }
         const sprite = new Image()
         sprite.src = localStorage.getItem(this.pokemon.name + spriteType)
-        this.pokeSprite = new PokeSprite(this, {x : x, y : y}, sprite)
+        this.pokeSprite = new PokeSprite(this, { x: x, y: y }, sprite)
         return
     }
 
@@ -535,14 +541,14 @@ class PokeInterface {
             x = 75
             y = 100
         }
-        this.infoWindow = new InfoWindow(this.canvas, {x : x, y : y}, this.pokemon)
+        this.infoWindow = new InfoWindow(this.canvas, { x: x, y: y }, this.pokemon)
     }
 
     drawPokemons() {
         this.ctx.drawImage(pokeImg, this.width * 0.6, this.height / 7, pokeAImg.naturalWidth * 2.7, pokeAImg.naturalHeight * 2.7)
     }
 
-    update() { 
+    update() {
         if (this.infoWindow != null) {
             this.infoWindow.update()
         }
@@ -553,6 +559,10 @@ class PokeInterface {
 
     attackAnimation() {
         this.pokeSprite.attackAnimation()
+    }
+
+    koAnimation() {
+        this.pokeSprite.koAnimation()
     }
 }
 
@@ -576,7 +586,7 @@ class UserInterface {
         this.moves = [[null, null, this.moveBaseColor], [null, null, this.moveBaseColor], [null, null, this.moveBaseColor], [null, null, this.moveBaseColor]] //format : [Move, Path2D, color]
     }
 
-    update() { 
+    update() {
         this.drawBackground()
         this.drawFrontground()
     }
@@ -605,7 +615,7 @@ class UserInterface {
         const gapy = 20
         const width = 150
         const height = 60
-        // console.log(this.terrain.pokemonA.currentMoves)
+        // //console.log(this.terrain.pokemonA.currentMoves)
         this.terrain.pokemonA.currentMoves.forEach(move => {
             if (move != null) {
                 let x = this.x + gapx + (width + gapx) * (i % 2)
@@ -651,7 +661,7 @@ class UserInterface {
     onMouseMove(event) {
         if (this.mousedown != -1) return;
         var pos = getCanvasRelative(event)
-        //console.log(`X : ${pos.x}, Y : ${pos.y}`)
+        ////console.log(`X : ${pos.x}, Y : ${pos.y}`)
         const moveIndex = this.isOnMove(pos.x, pos.y)
         if (moveIndex == -1) {
             this.mouseOverNothing()
@@ -662,7 +672,7 @@ class UserInterface {
     }
 
     onMouseRelease(event) {
-        console.log('Mouse released')
+        //console.log('Mouse released')
         var pos = getCanvasRelative(event)
         const moveIndex = this.isOnMove(pos.x, pos.y)
         if (moveIndex == -1 || this.mousedown != moveIndex) {
@@ -673,8 +683,8 @@ class UserInterface {
             if (this.mousedown == moveIndex) {
                 this.battle.useMove(moveIndex)
             }
-        } 
-        
+        }
+
         this.mousedown = -1
     }
     onMouseClick(event) {
@@ -718,7 +728,7 @@ class UserInterface {
     }
 
     clickOnMove(moveIndex) {
-        console.log(`Move ${moveIndex} used`);
+        //console.log(`Move ${moveIndex} used`);
         const clickColor = 'rgb(255,140,0)'
         this.moves[moveIndex][2] = clickColor
         this.updateMoves()
@@ -737,7 +747,7 @@ class InfoWindow {
         this.deltaHp = 0
         // ------------------------------------------------------
         // Des var accesible pour pouvoir edit la gueule des trucs
-        this.gap = 10 
+        this.gap = 10
         this.width = 275
         this.height = 75
         this.curve = [10]
@@ -747,7 +757,7 @@ class InfoWindow {
         // ------------------------------------------------------
     }
 
-    
+
     drawBackground() {
         this.ctx.beginPath();
         this.ctx.fillStyle = this.colorExt
@@ -814,31 +824,36 @@ class InfoWindow {
             this.deltaHp = 0
             return
         }
-        const numberOfFrames = 2*60
+        const numberOfFrames = 2 * 60
         if (this.deltaHp == 0) {
-            this.deltaHp = (this.healthBarCurrentHp - this.pokemon.currentStats['hp'])/ numberOfFrames
+            this.deltaHp = (this.healthBarCurrentHp - this.pokemon.currentStats['hp']) / numberOfFrames
         }
         this.healthBarCurrentHp -= this.deltaHp;
     }
 }
 
 class PokeSprite {
-    constructor(pokeInterface, pos , sprite) {
+    constructor(pokeInterface, pos, sprite) {
         this.pokeInterface = pokeInterface
         this.canvas = this.pokeInterface.canvas
         this.ctx = this.canvas.getContext('2d')
         this.pos = pos
         this.absolutePos = pos
         this.sprite = sprite
-        this.isAttacking = 0 // C'est en gros le compteur de frame d'animation de l'attaque, donc si c'est = 0 il n'y a pas d'animation
+        this.attackTick = 0 // C'est en gros le compteur de frame d'animation de l'attaque, donc si c'est = 0 il n'y a pas d'animation
+        this.koTick = 0
         this.speed = {
-            x : 0,
-            y : 0
+            x: 0,
+            y: 0
         }
         this.animationTiming = { //ptit espace pour stocker les key frames d'animation 
-            attack : {
-                moveForward : 0.3 * 60,
-                moveBackward : 0.6 * 60
+            attack: {
+                moveForward: 0.3 * 60,
+                moveBackward: 0.6 * 60
+            },
+            ko: {
+                moveup: 0.2 * 60,
+                movedown: 0.5 * 60
             }
         }
     }
@@ -847,9 +862,18 @@ class PokeSprite {
         this.animations()//on fait toutes les animations dans cette fonction
         this.draw()
     }
-    
+
     animations() {
-        if (this.isAttacking != 0) this.attackAnimation()
+        if (this.attackTick != 0) this.attackAnimation()
+        if (this.koTick != 0) this.koAnimation()
+        this.move()
+    }
+
+    isAnimation() {
+        if (this.attackTick != 0 || this.koTick != 0) {
+            return true
+        }
+        return false
     }
 
     draw() {
@@ -865,54 +889,55 @@ class PokeSprite {
     }
 
     attackAnimation() {
-        this.isAttacking++
-        console.log(this.isAttacking)
+        if (this.attackTick == 0 && !this.isAnimation) return
+        this.attackTick++
         const dx = 1
         const dy = 2
-        
-        // if (this.isAttacking == 0) {
-        //     //Des constantes pour modif la vitesse des animations
-        //     //Si on rentre ici c'est que l'attaque viens de commencer
-        //     if (this.pos.y > (this.canvas.height/2)) {
-        //         //On est donc sur le pokemon supérieur de l'écran
-        //         this.speed.x = - dx
-        //         this.speed.y = - dy
-        //     }
-        //     else{
-        //         this.speed.x = dx
-        //         this.speed.y = dy
-        //     }
-        // }
-        if (this.isAttacking <= this.animationTiming.attack.moveForward) {
+        if (this.attackTick <= this.animationTiming.attack.moveForward) {
             if (this.pokeInterface.team == 'A') {
                 //On est donc sur le pokemon inf de l'écran
-                this.speed.x =  dx
+                this.speed.x = dx
                 this.speed.y = - dy
             }
-            else{
+            else {
                 this.speed.x = - dx
                 this.speed.y = dy
             }
         }
-        else if (this.isAttacking <= this.animationTiming.attack.moveBackward) {
+        else if (this.attackTick <= this.animationTiming.attack.moveBackward) {
             if (this.pokeInterface.team == 'A') {
                 //On est donc sur le pokemon inf de l'écran
                 this.speed.x = - dx
-                this.speed.y =   dy
+                this.speed.y = dy
             }
-            else{
-                this.speed.x =   dx
+            else {
+                this.speed.x = dx
                 this.speed.y = - dy
             }
         }
         else {
             //Si on rentre ici c'est que l'animation est finito
-            this.isAttacking = 0
+            this.attackTick = 0
             this.speed.x = 0
             this.speed.y = 0
             this.pos = this.absolutePos
         }
-        this.move()
+    }
+
+    koAnimation() {
+        if (this.koTick == 0 && !this.isAnimation) return
+        this.koTick++
+        const dy = 1
+        if (this.koTick <= this.animationTiming.ko.moveup) {
+            this.speed.y = -dy
+        }
+        else if (this.koTick <= this.animationTiming.ko.movedown) {
+            this.speed.y = dy
+        }
+        else {
+            this.koTick = 0
+            this.speed.y = 0
+        }
     }
 
     move() {
@@ -921,7 +946,7 @@ class PokeSprite {
         this.pos.y += this.speed.y
     }
 
-    
+
 }
 
 
@@ -985,7 +1010,7 @@ class InterfaceGlobale {
     }
 
     getInterfaceOfType(type) {
-        var interfaceList =[]
+        var interfaceList = []
         this.interfaces.forEach(inter => {
             if (inter instanceof type) {
                 interfaceList.push(inter)
@@ -998,7 +1023,7 @@ class InterfaceGlobale {
         this.update()
         window.requestAnimationFrame(this.tick.bind(this))
     }
-    
+
     update() {
         this.interfaces.forEach(inter => {
             if (inter != null) {
@@ -1060,7 +1085,7 @@ const combatBasique = async () => {
     const interfaceGlobale = new InterfaceGlobale(document.querySelector('canvas'))
 
     const combat = new Combat(interfaceGlobale, terrain)
-    console.log(typeof combat)
+    //console.log(typeof combat)
 }
 
 
