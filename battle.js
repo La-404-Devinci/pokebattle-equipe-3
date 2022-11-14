@@ -218,6 +218,18 @@ const drawBackground = (self,) => {
     this.ctx.fillRect(0, horizon, this.width, this.height - horizon);
 }
 
+const randomMoves = async (pokemon) => {
+    const nbOfMove = pokemon.possiblesmoves.length - 1
+    for (let index = 0; index < pokemon.currentMoves.length; index++) {
+        let move = await createMoveFromName(pokemon.possiblesmoves[getRandomInt(0, nbOfMove)])
+        while (move in pokemon.currentMoves) {
+            move = await createMoveFromName(pokemon.possiblesmoves[getRandomInt(0, nbOfMove)])
+        }
+        console.log(move)
+        pokemon.currentMoves[index] = move
+    }
+}
+
 
 
 //Classes -------------------
@@ -228,7 +240,6 @@ class Pokemon {
      * @param pokejson
      */
     constructor(pokejson) {
-
         this.name = pokejson.name
         this.types = ['none', 'none']
         pokejson.types.forEach(element => {
@@ -258,7 +269,7 @@ class Pokemon {
         });
         this.currentMoves = [null, null, null, null]
         this.status = "Healthy"
-        this.level = 1
+        this.level = 50
         this.terrain = null
         this.team = null
         this.state = null
@@ -275,6 +286,10 @@ class Pokemon {
             localStorage.setItem(this.name + '-front', pokejson.sprites.front_default)
             localStorage.setItem(this.name + '-back', pokejson.sprites.back_default)
         }
+    }
+
+    calcStats() {
+        
     }
 
     setTerrain(terrain) {
@@ -853,7 +868,7 @@ class PokeSprite {
             },
             ko: {
                 moveup: 0.2 * 60,
-                movedown: 0.5 * 60
+                movedown: 20 * 60
             }
         }
     }
@@ -1068,24 +1083,15 @@ class InterfaceGlobale {
 
 
 const combatBasique = async () => {
-    charizard = await createPokemonFromId('charizard')
-    pikachu = await createPokemonFromId('pikachu')
-    await charizard.setMove('fire-punch', 0)
-    await charizard.setMove('headbutt', 1)
-    await charizard.setMove('solar-beam', 2)
-    await charizard.setMove('cut', 3)
+    let pokemonA1 = await createPokemonFromId('pikachu')
+    let pokemonB1 = await createPokemonFromId('pikachu')
+    randomMoves(pokemonA1)
+    randomMoves(pokemonB1)
+    let terrain = new Terrain([pokemonA1, null, null, null, null, null], [pokemonB1, null, null, null, null, null])
 
-    await pikachu.setMove('thunderbolt', 0)
-    await pikachu.setMove('thunder', 1)
+    let interfaceGlobale = new InterfaceGlobale(document.querySelector('canvas'))
 
-    terrain = await new Terrain([charizard, null, null, null, null, null], [pikachu, null, null, null, null, null])
-    await charizard.useMove(1, pikachu, 5)
-    charizard.currentStats['hp'] -= 50
-
-    const interfaceGlobale = new InterfaceGlobale(document.querySelector('canvas'))
-
-    const combat = new Combat(interfaceGlobale, terrain)
-    //console.log(typeof combat)
+    let combat = new Combat(interfaceGlobale, terrain)
 }
 
 
