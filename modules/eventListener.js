@@ -7,6 +7,7 @@ export class EventListener {
         this.window.interfaces.forEach(inter => {
             if (typeof inter.onMouseClick == 'function') {
                 inter.onMouseClick(e)
+                console.log(e)
             }
         });
     }
@@ -23,6 +24,16 @@ export class EventListener {
         this.window.interfaces.forEach(inter => {
             if (typeof inter.onMouseRelease == 'function') {
                 inter.onMouseRelease(e)
+            }
+        });
+    }
+
+    onKeyPress(e) { 
+        console.log(e)
+        this.window.interfaces.forEach(inter => {
+            if (typeof inter.onKeyPress == 'function') {
+                inter.onKeyPress(e)
+                console.log(e)
             }
         });
     }

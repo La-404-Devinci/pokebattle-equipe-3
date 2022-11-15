@@ -245,3 +245,10 @@ export const sameColor = (c1, c2) => {
     }
     return true
 }
+
+export const startWith = (str, start) => {
+    for (let index = 0; index < start.length; index++) {
+        if (str[index] != start[index]) return false
+    }
+    return true
+}

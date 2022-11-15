@@ -7,7 +7,6 @@ canvas.width = 1024;
 canvas.height = 576;
 //util.combatBasique()
 let window = new Window(document.querySelector('canvas'))
-///let title = new TitleScreen(window)
-// let teamselect = new TeamSelect()
-console.log([null, null, null, null, null, null])
-window.addInterface(title)
+// let title = new TitleScreen(window)
+let teamselect = new TeamSelect(window)
+window.addInterface(teamselect)

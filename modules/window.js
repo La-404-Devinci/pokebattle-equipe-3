@@ -74,10 +74,12 @@ export class Window {
 
     initEvent() {
         var fClick = this.eventListener.onMouseClick.bind(this.eventListener)
-        this.canvas.addEventListener('mousedown', fClick)
+        this.canvas.addEventListener('mousedown', fClick, false)
         var fMove = this.eventListener.onMouseMove.bind(this.eventListener)
-        this.canvas.addEventListener('mousemove', fMove)
+        this.canvas.addEventListener('mousemove', fMove, false)
         var fRelease = this.eventListener.onMouseRelease.bind(this.eventListener)
-        this.canvas.addEventListener('mouseup', fRelease)
+        this.canvas.addEventListener('mouseup', fRelease, false)
+        var fKeyPress = this.eventListener.onKeyPress.bind(this.eventListener)
+        this.canvas.addEventListener('keydown', fKeyPress, false)
     }
 }
