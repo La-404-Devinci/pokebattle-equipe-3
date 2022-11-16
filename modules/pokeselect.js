@@ -1,6 +1,7 @@
 import { Pokedex } from "./pokedex.js"
 import { PokeSearch } from "./pokesearch.js"
 import { PokeZone } from "./pokezone.js"
+import * as util from "./util.js"
 
 export class PokeSelect{
     constructor(window, teamselect) {
@@ -32,17 +33,20 @@ export class PokeSelect{
     onMouseClick(event) { 
         if(this.teamselect.activewindow != this) return
         var pos = util.getCanvasRelative(event)
+        this.pokesearch.click(pos)
     }
 
     onKeyPress(event) {
         if(this.teamselect.activewindow != this) return
+        console.log(event)
         if (event.location == 0) {
-            if (event.code == 8) {
+            if (event.keycode == 8) {
                 // Le 8 c'est backspace
                 this.pokesearch.delChar()
             }
             else {
-                this.pokesearch.addChar(String.fromCharCode(event.code))
+                console.log(event.key)
+                this.pokesearch.addChar(event.key)
             }
         }
     }

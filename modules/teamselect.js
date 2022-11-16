@@ -109,7 +109,13 @@ export class TeamSelect {
                 this.pokecards[this.activecard].isactive = true
             }
         }
+        this.activewindow.onMouseClick(event)
     }
+
+    onKeyPress(event) {
+        this.activewindow.onKeyPress(event)
+    }
+
 
 
 }

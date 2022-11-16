@@ -31,7 +31,8 @@ export class PokeSearch{
             gap : 5, 
             linewidth : 5
         }
-        this.active = true
+        this.active = false
+        this.resetText()
     }
 
     moveTo(pos) {
@@ -46,6 +47,7 @@ export class PokeSearch{
 
     update(){
         // if(this.pokeselect.teamselect.activewindow != this) return
+        console.log(this.active)
         this.drawBar()
         this.drawButton()
     }
@@ -95,7 +97,7 @@ export class PokeSearch{
             this.resetText()
             this.active = true
         }
-        else if (this.window.ctx.isPointInPath(this.bar.pathext, pos.x, pos.y)) { 
+        else if (this.window.ctx.isPointInPath(this.bar.pathint, pos.x, pos.y)) { 
             this.active = true
         }
         else {

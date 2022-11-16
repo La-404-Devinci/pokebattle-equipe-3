@@ -73,6 +73,7 @@ export class Window {
     }
 
     initEvent() {
+        this.canvas.setAttribute("tabindex", 0); // Cette ligne est le resultat de 2h d'emerdement pour avoir lles keypress aui fonctionnent
         var fClick = this.eventListener.onMouseClick.bind(this.eventListener)
         this.canvas.addEventListener('mousedown', fClick, false)
         var fMove = this.eventListener.onMouseMove.bind(this.eventListener)
@@ -80,6 +81,6 @@ export class Window {
         var fRelease = this.eventListener.onMouseRelease.bind(this.eventListener)
         this.canvas.addEventListener('mouseup', fRelease, false)
         var fKeyPress = this.eventListener.onKeyPress.bind(this.eventListener)
-        this.canvas.addEventListener('keydown', fKeyPress, false)
+        this.canvas.addEventListener('keypress', fKeyPress, false)
     }
 }

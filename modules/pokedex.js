@@ -21,15 +21,17 @@ export class Pokedex{
 
     getStartingWith(str) {
         if (str == '') return this.pokemonNames
-        res = []
+        var res = []
         //On trouve le bon indice de début
         var index = 0
+        console.log(this.pokemonNames[index])
+        console.log(str)
         while (!(util.startWith(this.pokemonNames[index], str)) && index <= this.count) {
             index++
         }
         const index1 = index
         while (util.startWith(this.pokemonNames[index], str) && index <= this.count) {
-            res.push(this.pokemon.name[index])
+            res.push(this.pokemonNames[index])
             index++
         }
         const index2 = index - 1
