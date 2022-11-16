@@ -32,7 +32,6 @@ export class PokeSearch{
             linewidth : 5
         }
         this.active = false
-        this.resetText()
     }
 
     moveTo(pos) {
@@ -47,7 +46,6 @@ export class PokeSearch{
 
     update(){
         // if(this.pokeselect.teamselect.activewindow != this) return
-        console.log(this.active)
         this.drawBar()
         this.drawButton()
     }

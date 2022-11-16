@@ -57,6 +57,7 @@ export class PokeSelect{
     }
 
     init() {
+        this.pokesearch.resetText()
         this.pokesearch.moveTo({
             x : this.background.x + this.searchoffset.x,
             y: this.background.y + this.searchoffset.y

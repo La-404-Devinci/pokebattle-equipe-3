@@ -36,6 +36,7 @@ export class PokeZone{
 
     update() {
         this.drawBackground()
+        this.drawGrid()
     }
 
     drawBackground() {
@@ -48,6 +49,7 @@ export class PokeZone{
         this.pokecards = [] // reset
         for (let index = 0; index < pokenamelist.length && index < (this.column * this.row); index++) {
             const pokename = array[index];
+            console.log(pokename)
             const pokemon = util.createPokemonFromId(pokename)
             this.pokecards.push(new PokeCard(this.window, pokemon))   
         }
